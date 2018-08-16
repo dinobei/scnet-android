@@ -3,10 +3,15 @@ import android.util.SparseArray;
 import com.google.protobuf.MessageLite;
 
 public class ServerManager {
+    private static final ServerManager mInstance = new ServerManager();
+    public static ServerManager getInstance() {
+        return mInstance;
+    }
+
     private final int MAX_CONNECTION = 64;
     private SparseArray<ServerSession> mSessionList;
 
-    public ServerManager() {
+    private ServerManager() {
         this.mSessionList = new SparseArray<>();
     }
 
