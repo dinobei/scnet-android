@@ -50,5 +50,15 @@ public class ServerManager {
         return true;
     }
 
+    public void detachAll() {
+        for(int i = 0 ; i < mSessionList.size() ; i++) {
+            int key = mSessionList.keyAt(i);
+            ServerSession serverSession = mSessionList.get(key);
+            serverSession.interrupt();
+        }
+
+        mSessionList.clear();
+    }
+
 
 }

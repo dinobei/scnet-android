@@ -54,7 +54,7 @@ public class RequestSender extends Thread {
             }
         }
         Log.d("scnet-android", "Finished RequestSender Thread");
-        mResponseReceiver.interrupt();
+        if(mResponseReceiver != null) mResponseReceiver.interrupt();
     }
 
     private void sendRequest(Stream stream, MessageLite message) throws IOException {
