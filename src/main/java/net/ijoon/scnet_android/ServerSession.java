@@ -13,11 +13,11 @@ public class ServerSession extends Thread {
 
     private RequestSender mRequestSender;
     private ResponseReceiver mResponseReceiver;
-    private ClientManagerCallback mCallback;
+    private SCNetClientCallback mCallback;
 
 //    private long mLastPing;
 
-    ServerSession(String ip, int port, int socketTimeoutMilis, ClientManagerCallback callback) {
+    ServerSession(String ip, int port, int socketTimeoutMilis, SCNetClientCallback callback) {
         mIp = ip;
         mPort = port;
         mSocketTimeoutMilis = socketTimeoutMilis;

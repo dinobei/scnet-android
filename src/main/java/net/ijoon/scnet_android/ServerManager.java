@@ -10,7 +10,7 @@ public class ServerManager {
         this.mSessionList = new SparseArray<>();
     }
 
-    public int attach(String ip, int port, int socketTimeoutMillis, ClientManagerCallback callback) throws Exception {
+    public int attach(String ip, int port, int socketTimeoutMillis, SCNetClientCallback callback) throws Exception {
         for(int i = 0 ; i < MAX_CONNECTION ; i++) {
             if(mSessionList.get(i) == null) {
                 ServerSession serverSession = new ServerSession(ip, port, socketTimeoutMillis, callback);

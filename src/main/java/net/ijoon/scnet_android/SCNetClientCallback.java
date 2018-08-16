@@ -4,7 +4,7 @@ package net.ijoon.scnet_android;
  * Created by pbj on 2017. 12. 14..
  */
 
-public interface ClientManagerCallback {
+public interface SCNetClientCallback {
     void onAttaching();
     void onAttached();
     void onAttachFailed();

@@ -11,12 +11,12 @@ import java.util.Iterator;
  */
 
 class ResponseReceiver extends Thread {
-    private ClientManagerCallback mCallback;
+    private SCNetClientCallback mCallback;
 
     private Stream mStream;
     private RequestSender mRequestSender;
 
-    ResponseReceiver(@NotNull ClientManagerCallback callback) {
+    ResponseReceiver(@NotNull SCNetClientCallback callback) {
         mCallback = callback;
     }
 

@@ -3,7 +3,7 @@ package net.ijoon.scnet_android;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
-public class SCNetAppCompatActivity extends AppCompatActivity implements ClientManagerCallback {
+public class SCNetAppCompatActivity extends AppCompatActivity implements SCNetClientCallback {
     GlobalApplication mGlobalApplication;
 
     @Override

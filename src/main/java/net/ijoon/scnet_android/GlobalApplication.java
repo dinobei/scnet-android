@@ -14,9 +14,9 @@ import java.util.Stack;
  * Created by pbj on 2017. 12. 15..
  */
 
-public class GlobalApplication extends Application implements ClientManagerCallback {
+public class GlobalApplication extends Application implements SCNetClientCallback {
     ServerSession mServerSession;
-    ClientManagerCallback mCallback;
+    SCNetClientCallback mCallback;
 
     MyActivityLifecycleCallbacks mMyActivityLifecycleCallbacks;
 
