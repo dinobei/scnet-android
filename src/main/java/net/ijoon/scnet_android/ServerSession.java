@@ -7,13 +7,17 @@ import java.io.IOException;
  */
 
 public class ServerSession extends Thread {
+    private boolean mIsMainServerSession;
+    private int mSessionIndex;
+
     private String mIp;
     private int mPort;
     private int mSocketTimeoutMilis;
 
     private RequestSender mRequestSender;
     private ResponseReceiver mResponseReceiver;
-    private SCNetClientCallback mCallback;
+    private SCNetClientCallback mMainServerCallback;
+    private ServerManagerCallback mServerManagerCallback;
 
 //    private long mLastPing;
 
@@ -22,7 +26,18 @@ public class ServerSession extends Thread {
         mPort = port;
         mSocketTimeoutMilis = socketTimeoutMilis;
 
-        mCallback = callback;
+        mIsMainServerSession = true;
+        mMainServerCallback = callback;
+    }
+
+    ServerSession(int sessionIndex, String ip, int port, int socketTimeoutMilis, ServerManagerCallback callback) {
+        mIp = ip;
+        mPort = port;
+        mSocketTimeoutMilis = socketTimeoutMilis;
+
+        mIsMainServerSession = false;
+        mServerManagerCallback = callback;
+        mSessionIndex = sessionIndex;
     }
 
     boolean request(MessageLite message) {
@@ -41,12 +56,14 @@ public class ServerSession extends Thread {
     private Stream connect() {
         Stream stream = null;
         try {
-            mCallback.onAttaching();
+            if(mIsMainServerSession) mMainServerCallback.onAttaching();
+            else mServerManagerCallback.onAttaching(mSessionIndex);
 
             stream = new Stream(mIp, mPort, mSocketTimeoutMilis);
 
         } catch (Exception e) {
-            mCallback.onAttachFailed();
+            if(mIsMainServerSession) mMainServerCallback.onAttachFailed();
+            else mServerManagerCallback.onAttachFailed(mSessionIndex);
         }
 
         return stream;
@@ -70,10 +87,16 @@ public class ServerSession extends Thread {
 
             // Create send/recv thread when connected to server
             mRequestSender = new RequestSender();
-            mResponseReceiver = new ResponseReceiver(mCallback);
-
             mRequestSender.start(stream, mResponseReceiver);
-            mResponseReceiver.start(stream, mRequestSender); // passing client for cross-interrupt when server finished.
+
+            if(mIsMainServerSession) {
+                mResponseReceiver = new ResponseReceiver(mMainServerCallback);
+                mResponseReceiver.start(stream, mRequestSender); // passing client for cross-interrupt when server finished.
+            }
+            else {
+                mResponseReceiver = new ResponseReceiver(mSessionIndex, mServerManagerCallback);
+                mResponseReceiver.start(stream, mRequestSender); // passing client for cross-interrupt when server finished.
+            }
 
             try {
                 mResponseReceiver.join();
@@ -98,7 +121,8 @@ public class ServerSession extends Thread {
             }
         }
 
-        mCallback.onDetach();
+        if(mIsMainServerSession) mMainServerCallback.onDetach();
+        else mServerManagerCallback.onDetach(mSessionIndex);
     }
 
 

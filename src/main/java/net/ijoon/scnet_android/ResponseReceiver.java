@@ -11,13 +11,26 @@ import java.util.Iterator;
  */
 
 class ResponseReceiver extends Thread {
-    private SCNetClientCallback mCallback;
+    private boolean mIsMainServerSession;
+    private int mSessionIndex;
+
+    private SCNetClientCallback mMainServerCallback;
+    private ServerManagerCallback mServerManagerCallback;
 
     private Stream mStream;
     private RequestSender mRequestSender;
 
     ResponseReceiver(@NotNull SCNetClientCallback callback) {
-        mCallback = callback;
+        mMainServerCallback = callback;
+
+        mIsMainServerSession = true;
+    }
+
+    ResponseReceiver(int sessionIndex, @NotNull ServerManagerCallback callback) {
+        mServerManagerCallback = callback;
+
+        mIsMainServerSession = false;
+        mSessionIndex = sessionIndex;
     }
 
     @Override
@@ -34,7 +47,8 @@ class ResponseReceiver extends Thread {
     @Override
     public void run() {
         Log.d("scnet-android", "ResponseReceiver Thread Start");
-        mCallback.onAttached();
+        if(mIsMainServerSession) mMainServerCallback.onAttached();
+        else mServerManagerCallback.onAttached(mSessionIndex);
 
         while(!isInterrupted())
         {
@@ -84,6 +98,8 @@ class ResponseReceiver extends Thread {
         int cryptType = coded_input.readInt32();
         byte[] bodyBuf = stream.SafeRecv(dataSize);
 
-        mCallback.onResponse(packetType, cryptType, bodyBuf);
+        if(mIsMainServerSession) mMainServerCallback.onResponse(packetType, cryptType, bodyBuf);
+        else mServerManagerCallback.onResponse(mSessionIndex, packetType, cryptType, bodyBuf);
+
     }
 }
