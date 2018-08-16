@@ -13,7 +13,9 @@ C++, Swift, Java(Android), C# 에서 공용 헤더 사용으로 네트워크 송
 - 비동기 응답 콜백
 
 ## 사용방법
-(1) ~/app/src/main/proto/ 에 사용할 프로토버퍼 메시지인 `.proto` 파일 추가
+(1) ~/app/src/main/proto/ 에 사용할 프로토버퍼 메시지가 정의된 `.proto` 파일 추가
+- http://works.ijoon.net/Developer/SCNet-pb/ 참고
+
 (2) Project 레벨의 build.gradle의 depenencies에 다음과 같이 추가
 ```gradle
 ...
@@ -27,8 +29,36 @@ dependencies {
 (3) 현재 프로젝트(SCNet-Android)를 모듈로 임포트
 New - Import Module에서 현재 프로젝트 폴더 선택
 
-(4) 모듈 app의 build.gradle의 dependencies에 다음 두 줄 추가
+(4) 모듈 app의 build.gradle에 아래와 같이 구문 추가
 ```gradle
+apply plugin: 'com.google.protobuf'
+
+android {
+
+    ...
+
+    protobuf {
+        protoc {
+            artifact = 'com.google.protobuf:protoc:3.4.0'
+        }
+        plugins {
+            javalite {
+                artifact = 'com.google.protobuf:protoc-gen-javalite:3.0.0'
+            }
+        }
+        generateProtoTasks {
+            all().each { task ->
+                task.builtins {
+                    remove java
+                }
+                task.plugins {
+                    javalite {}
+                }
+            }
+        }
+    }
+}
+
 dependencies {
     ...
     implementation project(':scnet-android')
@@ -44,12 +74,12 @@ dependencies {
 public class CustomApplication extends GlobalApplication {
     @Override
     public void onCreate() {
-	Registry.registMessage("packet_1", 0);
+        Registry.registMessage("packet_1", 0);
         Registry.registMessage("packet_2", 1);
         Registry.registMessage("packet_3", 2);
         Registry.registMessage("packet_4", 3);
 
-	setMainServerInfo("192.168.1.50", 9190, 1000); // 반드시 super.onCreate(); 이전에 호출해야 함
+        setMainServerInfo("192.168.1.50", 9190, 1000); // 반드시 super.onCreate(); 이전에 호출해야 함
         super.onCreate();
     }
 }
