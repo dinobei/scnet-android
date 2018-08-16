@@ -10,5 +10,5 @@ public interface ClientManagerCallback {
     void onAttachFailed();
     void onDetach();
 
-    void onCallback(int packetType, int cryptType, byte[] bodyBuf);
+    void onResponse(int packetType, int cryptType, byte[] bodyBuf);
 }

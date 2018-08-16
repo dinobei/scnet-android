@@ -2,7 +2,6 @@ package net.ijoon.scnet_android;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 
 public class SCNetAppCompatActivity extends AppCompatActivity implements ClientManagerCallback {
     GlobalApplication mGlobalApplication;
@@ -38,6 +37,6 @@ public class SCNetAppCompatActivity extends AppCompatActivity implements ClientM
     }
 
     @Override
-    public void onCallback(int packetType, int cryptType, byte[] bodyBuf) {
+    public void onResponse(int packetType, int cryptType, byte[] bodyBuf) {
     }
 }

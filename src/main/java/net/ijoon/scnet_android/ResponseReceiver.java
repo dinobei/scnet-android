@@ -84,6 +84,6 @@ class ResponseReceiver extends Thread {
         int cryptType = coded_input.readInt32();
         byte[] bodyBuf = stream.SafeRecv(dataSize);
 
-        mCallback.onCallback(packetType, cryptType, bodyBuf);
+        mCallback.onResponse(packetType, cryptType, bodyBuf);
     }
 }

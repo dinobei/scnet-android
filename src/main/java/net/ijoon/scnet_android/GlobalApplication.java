@@ -15,18 +15,20 @@ import java.util.Stack;
  */
 
 public class GlobalApplication extends Application implements ClientManagerCallback {
-    private ClientManager mClientManager;
+    ServerSession mServerSession;
     ClientManagerCallback mCallback;
 
     MyActivityLifecycleCallbacks mMyActivityLifecycleCallbacks;
 
     String mServIP = null;
     int mServPort = 0;
+    int mSocketTimeoutMillis = 1000;
 
-    public void setServerInfo(String ip, int port)
+    public void setMainServerInfo(String ip, int port, int socketTimeoutMillis)
     {
-        mServIP = ip;
-        mServPort = port;
+        this.mServIP = ip;
+        this.mServPort = port;
+        this.mSocketTimeoutMillis = socketTimeoutMillis;
     }
 
     @Override
@@ -41,27 +43,27 @@ public class GlobalApplication extends Application implements ClientManagerCallb
 
     @Override
     public void onAttaching() {
-        mCallback.onAttaching();
+        if(mCallback != null) mCallback.onAttaching();
     }
 
     @Override
     public void onAttached() {
-        mCallback.onAttached();
+        if(mCallback != null) mCallback.onAttached();
     }
 
     @Override
     public void onAttachFailed() {
-        mCallback.onAttachFailed();
+        if(mCallback != null) mCallback.onAttachFailed();
     }
 
     @Override
     public void onDetach() {
-        mCallback.onDetach();
+        if(mCallback != null) mCallback.onDetach();
     }
 
     @Override
-    public void onCallback(int packetType, int cryptType, byte[] bodyBuf) {
-        mCallback.onCallback(packetType, cryptType, bodyBuf);
+    public void onResponse(int packetType, int cryptType, byte[] bodyBuf) {
+        if(mCallback != null) mCallback.onResponse(packetType, cryptType, bodyBuf);
     }
 
     public class MyActivityLifecycleCallbacks implements ActivityLifecycleCallbacks {
@@ -84,9 +86,8 @@ public class GlobalApplication extends Application implements ClientManagerCallb
             if (++running == 1) {
                 // running activity is 1,
                 // app must be returned from background just now (or first launch)
-                mClientManager = new ClientManager(mServIP, mServPort, 1000, GlobalApplication.this);
-                mClientManager.start();
-
+                mServerSession = new ServerSession(mServIP, mServPort, mSocketTimeoutMillis, GlobalApplication.this);
+                mServerSession.start();
             } else if (running > 1) {
                 // 2 or more running activities,
                 // should be foreground already.
@@ -108,7 +109,7 @@ public class GlobalApplication extends Application implements ClientManagerCallb
             if (--running == 0) {
                 // no active activity
                 // app goes to background
-                mClientManager.interrupt();
+                mServerSession.interrupt();
             }
         }
 
@@ -122,6 +123,6 @@ public class GlobalApplication extends Application implements ClientManagerCallb
     }
 
     public void request(MessageLite message) {
-        mClientManager.request(message);
+        mServerSession.request(message);
     }
 }

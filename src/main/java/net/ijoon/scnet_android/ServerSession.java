@@ -1,5 +1,4 @@
 package net.ijoon.scnet_android;
-import android.util.Log;
 import com.google.protobuf.MessageLite;
 import java.io.IOException;
 
@@ -7,7 +6,7 @@ import java.io.IOException;
  * Created by pbj on 2017. 12. 13..
  */
 
-public class ClientManager extends Thread {
+public class ServerSession extends Thread {
     private String mIp;
     private int mPort;
     private int mSocketTimeoutMilis;
@@ -18,7 +17,7 @@ public class ClientManager extends Thread {
 
 //    private long mLastPing;
 
-    public ClientManager(String ip, int port, int socketTimeoutMilis, ClientManagerCallback callback) {
+    ServerSession(String ip, int port, int socketTimeoutMilis, ClientManagerCallback callback) {
         mIp = ip;
         mPort = port;
         mSocketTimeoutMilis = socketTimeoutMilis;
