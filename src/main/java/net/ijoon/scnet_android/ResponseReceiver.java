@@ -73,6 +73,11 @@ class ResponseReceiver extends Thread {
     }
 
     private void recvResponse(Stream stream) throws IOException {
+        byte[] magicPacket = stream.SafeRecv(MessageHeader.MAGIC_PACKET.length);
+        if(!MessageHeader.isValidMagicPacket(magicPacket)) {
+            throw new IOException("Invalid magic packet");
+        }
+
         byte[] headerBuf = new byte[MessageHeader.MAX_PACKET_HEADER_SIZE];
         int idx = 0;
         int receivedHeaderComponent = 0;
@@ -93,13 +98,15 @@ class ResponseReceiver extends Thread {
 
         CodedInputStream coded_input = CodedInputStream.newInstance(headerBuf);
 
-        int dataSize = coded_input.readInt32();
-        int packetType = coded_input.readInt32();
-        int cryptType = coded_input.readInt32();
-        byte[] bodyBuf = stream.SafeRecv(dataSize);
+        MessageHeader messageHeader = new MessageHeader();
+        messageHeader.mDataSize = coded_input.readInt32();
+        messageHeader.mPacketType = coded_input.readInt32();
+        messageHeader.mMessageType = coded_input.readInt32();
+        messageHeader.mCryptType = coded_input.readInt32();
+        messageHeader.mReserved = coded_input.readInt32();
+        byte[] bodyBuf = stream.SafeRecv(messageHeader.mDataSize);
 
-        if(mIsMainServerSession) mMainServerCallback.onResponse(packetType, cryptType, bodyBuf);
-        else mServerManagerCallback.onResponse(mSessionIndex, packetType, cryptType, bodyBuf);
-
+        if(mIsMainServerSession) mMainServerCallback.onResponse(messageHeader, bodyBuf);
+        else mServerManagerCallback.onResponse(mSessionIndex, messageHeader, bodyBuf);
     }
 }

@@ -37,6 +37,6 @@ public class SCNetAppCompatActivity extends AppCompatActivity implements SCNetCl
     }
 
     @Override
-    public void onResponse(int packetType, int cryptType, byte[] bodyBuf) {
+    public void onResponse(MessageHeader messageHeader, byte[] bodyBuf) {
     }
 }

@@ -10,5 +10,5 @@ public interface SCNetClientCallback {
     void onAttachFailed();
     void onDetach();
 
-    void onResponse(int packetType, int cryptType, byte[] bodyBuf);
+    void onResponse(MessageHeader messageHeader, byte[] bodyBuf);
 }

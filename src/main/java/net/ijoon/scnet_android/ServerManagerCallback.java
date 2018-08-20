@@ -10,5 +10,5 @@ public interface ServerManagerCallback {
     void onAttachFailed(int sessionIndex);
     void onDetach(int sessionIndex);
 
-    void onResponse(int sessionIndex, int packetType, int cryptType, byte[] bodyBuf);
+    void onResponse(int sessionIndex, MessageHeader messageHeader, byte[] bodyBuf);
 }

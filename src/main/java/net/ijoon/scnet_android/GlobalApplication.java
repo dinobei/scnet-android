@@ -62,8 +62,8 @@ public class GlobalApplication extends Application implements SCNetClientCallbac
     }
 
     @Override
-    public void onResponse(int packetType, int cryptType, byte[] bodyBuf) {
-        if(mCallback != null) mCallback.onResponse(packetType, cryptType, bodyBuf);
+    public void onResponse(MessageHeader messageHeader, byte[] bodyBuf) {
+        if(mCallback != null) mCallback.onResponse(messageHeader, bodyBuf);
     }
 
     public class MyActivityLifecycleCallbacks implements ActivityLifecycleCallbacks {
@@ -71,7 +71,6 @@ public class GlobalApplication extends Application implements SCNetClientCallbac
         // running activity count
         private int running = 0;
         private Stack<Activity> mApplicationStack = new Stack<>();
-
 
         @Override
         public void onActivityCreated(Activity activity, Bundle bundle) {

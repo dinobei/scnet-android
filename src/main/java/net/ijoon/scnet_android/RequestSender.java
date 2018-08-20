@@ -62,12 +62,14 @@ public class RequestSender extends Thread {
         byte []serialized = new byte[dataSize + MessageHeader.MAX_PACKET_HEADER_SIZE];
         CodedOutputStream coded_output = CodedOutputStream.newInstance(serialized, 0, dataSize);
 
-        int packetType = Registry.GetPacketType(message);
 
         try {
-            coded_output.writeInt32NoTag(dataSize);
-            coded_output.writeInt32NoTag(packetType);
+            coded_output.writeRawBytes(MessageHeader.MAGIC_PACKET);
+            coded_output.writeInt32NoTag(dataSize); // data size
+            coded_output.writeInt32NoTag(Registry.GetPacketType(message)); // packet type
+            coded_output.writeInt32NoTag(0); // message type
             coded_output.writeInt32NoTag(0); // crypt type
+            coded_output.writeInt32NoTag(0); // reserved
             message.writeTo(coded_output);
         } catch (IOException e) {
             e.printStackTrace();
