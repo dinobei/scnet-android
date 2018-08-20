@@ -87,7 +87,7 @@ class ResponseReceiver extends Thread {
 
             headerBuf[idx++] = data[0];
 
-            if(data[0] > (byte)127) {
+            if((data[0] & 0xFF) > (byte)127) {
                 continue;
             }
 
