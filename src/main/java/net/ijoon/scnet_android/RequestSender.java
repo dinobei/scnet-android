@@ -68,7 +68,6 @@ public class RequestSender extends Thread {
             coded_output.writeInt32NoTag(Registry.GetPacketType(message)); // packet type
             coded_output.writeInt32NoTag(0); // message type
             coded_output.writeInt32NoTag(0); // crypt type
-            coded_output.writeInt32NoTag(0); // reserved
             message.writeTo(coded_output);
         } catch (IOException e) {
             e.printStackTrace();
