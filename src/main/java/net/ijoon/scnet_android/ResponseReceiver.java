@@ -103,9 +103,17 @@ class ResponseReceiver extends Thread {
         messageHeader.mPacketType = coded_input.readInt32();
         messageHeader.mMessageType = coded_input.readInt32();
         messageHeader.mCryptType = coded_input.readInt32();
-        byte[] bodyBuf = stream.SafeRecv(messageHeader.mDataSize);
 
-        if(mIsMainServerSession) mMainServerCallback.onResponse(messageHeader, bodyBuf);
-        else mServerManagerCallback.onResponse(mSessionIndex, messageHeader, bodyBuf);
+        if(messageHeader.mDataSize > 0) {
+            byte[] bodyBuf = stream.SafeRecv(messageHeader.mDataSize);
+
+            if(mIsMainServerSession) mMainServerCallback.onResponse(messageHeader, bodyBuf);
+            else mServerManagerCallback.onResponse(mSessionIndex, messageHeader, bodyBuf);
+        }
+        else {
+            if(mIsMainServerSession) mMainServerCallback.onResponse(messageHeader, new byte[0]);
+            else mServerManagerCallback.onResponse(mSessionIndex, messageHeader, new byte[0]);
+        }
+
     }
 }
