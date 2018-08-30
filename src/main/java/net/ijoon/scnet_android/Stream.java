@@ -88,12 +88,6 @@ public class Stream {
             partialRecvCount = mSocketChannel.read(ByteBuffer.wrap(recvBuf, totalRecvCount, recvSize - totalRecvCount));
             if(partialRecvCount < 0) throw new IOException("SafeRecv() Failed");
             totalRecvCount += partialRecvCount;
-
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         }
 
         return recvBuf;
