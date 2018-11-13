@@ -32,8 +32,19 @@ dependencies {
 }
 ```
 
-(3) 현재 프로젝트(SCNet-Android)를 모듈로 임포트
-New - Import Module에서 현재 프로젝트 폴더 선택
+(3) SCNet-Android 프로젝트를 개발중인 앱에 모듈로 임포트
+아래 명령어를 이용해서 SCNet-Android를 git 서브모듈로 추가
+
+```
+$ cd MyApp // 내 앱 최상위 경로로 이동
+$ git add submodule http://works.ijoon.net/Developer/SCNet-Android scnet-android
+```
+
+settings.gradle 파일을 다음과 같이 수정한 뒤 sync now 버튼 클릭
+```
+include ':app', ':scnet-android'
+project(':scnet-android').projectDir = new File('scnet-android')
+```
 
 (4) 모듈 app의 build.gradle에 아래와 같이 구문 추가
 ```gradle
