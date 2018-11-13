@@ -17,6 +17,11 @@ C++, Swift, Java(Android), C# 에서 공용 헤더 사용으로 네트워크 송
 - 프로젝트 루트에서 app/src/main/proto 폴더로 SCNet-pb 프로젝트를 복제(clone)
 - SCNet-pb 프로젝트 주소: http://works.ijoon.net/Developer/SCNet-pb/
 
+```
+$ cd ~/app/src/main
+$ git clone http://works.ijoon.net/Developer/SCNet-pb/ proto
+```
+
 (2) Project 레벨의 build.gradle의 depenencies에 다음과 같이 추가
 ```gradle
 ...
