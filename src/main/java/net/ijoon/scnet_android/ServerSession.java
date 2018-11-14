@@ -103,11 +103,13 @@ public class ServerSession extends Thread {
                 mRequestSender.interrupt();
             }  catch (InterruptedException ignored) {
                 try {
-                    mRequestSender.join(200);
-                    if(mRequestSender.isAlive()) {
-                        mRequestSender.interrupt();
-                        super.interrupt();
-                    }
+                    mResponseReceiver.interrupt();
+                    mRequestSender.interrupt();
+
+                    mResponseReceiver.join();
+                    mRequestSender.join();
+
+                    super.interrupt();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                     super.interrupt();
