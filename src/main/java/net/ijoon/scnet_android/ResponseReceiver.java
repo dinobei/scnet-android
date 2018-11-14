@@ -58,7 +58,7 @@ class ResponseReceiver extends Thread {
                 while(iter.hasNext()) {
                     SelectionKey key = iter.next();
                     iter.remove();
-                    if (key.isReadable()) {
+                    if (key.isValid() && key.isReadable()) {
                         recvResponse(mStream);
                     }
                 }
