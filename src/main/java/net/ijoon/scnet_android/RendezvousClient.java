@@ -31,6 +31,8 @@ public class RendezvousClient extends Thread {
 
     SparseArray<RendezvousSession> rendezvousSessionArray = new SparseArray<>();
 
+    private InetSocketAddress rendezvousServerAddress;
+
     public final static int TYPE_INET4ADDRESS = 1;
     public final static int TYPE_INET6ADDRESS = 2;
 
@@ -56,7 +58,7 @@ public class RendezvousClient extends Thread {
                     }
                 }
             }
-        }catch (Exception e) {
+        } catch (Exception e) {
         }
         return null;
     }
@@ -64,6 +66,7 @@ public class RendezvousClient extends Thread {
     public RendezvousClient(String ip, int port) {
         rendezvousServerIP = ip;
         rendezvousServerPort = port;
+        rendezvousServerAddress = new InetSocketAddress(ip, port);
     }
 
     @Override
@@ -83,7 +86,7 @@ public class RendezvousClient extends Thread {
 
                 while(!isInterrupted()) {
                     try {
-                        send(new InetSocketAddress(rendezvousServerIP, rendezvousServerPort), RendezvousPacketType.REGISTRATION_RENDEZVOUS_CLIENT_REQUEST, localAddress + " " + localPort);
+                        send(rendezvousServerAddress, 0, RendezvousPacketType.REGISTRATION_RENDEZVOUS_CLIENT_REQUEST.toInt(), localAddress + " " + localPort);
                         Thread.sleep(60*1000);
 
                     } catch (IOException e) {
@@ -117,17 +120,17 @@ public class RendezvousClient extends Thread {
 
     }
 
-    public void send(InetSocketAddress remoteAddress, RendezvousPacketType packetType, String data) throws IOException {
-        send(remoteAddress,0, packetType, data);
+    public void connect(String ip, int port) throws IOException {
+        String data = ip + " " + port;
+        send(rendezvousServerAddress, 0, RendezvousPacketType.CONNECTION_REQUEST.toInt(), data);
     }
 
-    public void send(InetSocketAddress remoteAddress, int connectionID, RendezvousPacketType packetType, String data) throws IOException {
+    private void send(InetSocketAddress remoteAddress, int connectionID, int packetType, String data) throws IOException {
         ByteBuffer byteBuffer = null;
         int dataSize = 0;
         if(data != null) {
             byteBuffer = ByteBuffer.wrap(data.getBytes());
             dataSize = byteBuffer.array().length;
-
         }
 
         byte []serialized = new byte[MessageHeader.MAGIC_PACKET.length + dataSize + MessageHeader.MAX_PACKET_HEADER_SIZE];
@@ -136,7 +139,7 @@ public class RendezvousClient extends Thread {
         try {
             coded_output.writeRawBytes(MessageHeader.MAGIC_PACKET);
             coded_output.writeInt32NoTag(dataSize); // data size
-            coded_output.writeInt32NoTag(packetType.toInt()); // packet type
+            coded_output.writeInt32NoTag(packetType); // packet type
             coded_output.writeInt32NoTag(MessageHeader.MessageType.RAWBYTE.toInt()); // message type
             coded_output.writeInt32NoTag(0); // crypt type
             coded_output.writeInt32NoTag(connectionID); // connectionID
@@ -150,7 +153,7 @@ public class RendezvousClient extends Thread {
         datagramChannel.send(ByteBuffer.wrap(serialized, 0, coded_output.getTotalBytesWritten()), remoteAddress);
     }
 
-    void send(InetSocketAddress remoteAddress, int connectionID, MessageLite message) throws IOException {
+    private void send(InetSocketAddress remoteAddress, int connectionID, MessageLite message) throws IOException {
         int dataSize = message.getSerializedSize();
         byte []serialized = new byte[MessageHeader.MAGIC_PACKET.length + dataSize + MessageHeader.MAX_PACKET_HEADER_SIZE];
         CodedOutputStream coded_output = CodedOutputStream.newInstance(serialized, 0, serialized.length);
@@ -170,7 +173,7 @@ public class RendezvousClient extends Thread {
         datagramChannel.send(ByteBuffer.wrap(serialized, 0, coded_output.getTotalBytesWritten()), remoteAddress);
     }
 
-    public void recv() throws IOException {
+    private void recv() throws IOException {
         byteBuffer.clear();
         InetSocketAddress remoteAddress = (InetSocketAddress) datagramChannel.receive(byteBuffer);
         byteBuffer.flip();
@@ -266,7 +269,7 @@ public class RendezvousClient extends Thread {
                     rendezvousClientCallback.onConnecting(messageHeader.mConnectionID);
                 }
 
-                send(new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1])), messageHeader.mConnectionID, RendezvousPacketType.DIRECT_CONNECTION_REQUEST, null);
+                send(new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1])), messageHeader.mConnectionID, RendezvousPacketType.DIRECT_CONNECTION_REQUEST.toInt(), null);
                 break;
             }
             case DIRECT_CONNECTION_REQUEST: // TP only
@@ -284,7 +287,7 @@ public class RendezvousClient extends Thread {
                     }
                 }
 
-                send(remoteAddress, messageHeader.mConnectionID, RendezvousPacketType.DIRECT_CONNECTION_RESPONSE, null);
+                send(remoteAddress, messageHeader.mConnectionID, RendezvousPacketType.DIRECT_CONNECTION_RESPONSE.toInt(), null);
                 break;
             }
             case DIRECT_CONNECTION_RESPONSE: // SP only
@@ -324,7 +327,7 @@ public class RendezvousClient extends Thread {
                 }
 
                 InetSocketAddress sourceAddress = new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1]));
-                send(sourceAddress, messageHeader.mConnectionID, RendezvousPacketType.REVERSE_CONNECTION_REQUEST, null);
+                send(sourceAddress, messageHeader.mConnectionID, RendezvousPacketType.REVERSE_CONNECTION_REQUEST.toInt(), null);
 
                 break;
             }
@@ -332,7 +335,7 @@ public class RendezvousClient extends Thread {
             {
                 Log.d("scnet_android", "received REVERSE_CONNECTION_REQUEST");
 
-                send(remoteAddress, messageHeader.mConnectionID, RendezvousPacketType.REVERSE_CONNECTION_RESPONSE, null);
+                send(remoteAddress, messageHeader.mConnectionID, RendezvousPacketType.REVERSE_CONNECTION_RESPONSE.toInt(), null);
 
                 RendezvousSession rendezvousSession = getRendezvousSessionSafety(messageHeader);
                 boolean isConnected = rendezvousSession.isConnected();
@@ -382,10 +385,10 @@ public class RendezvousClient extends Thread {
 
                 // private, public 정보로 동시에 연결 요청 메시지를 보냄
                 InetSocketAddress publicAddress = new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1]));
-                send(publicAddress, messageHeader.mConnectionID, RendezvousPacketType.UDP_HOLE_PUNCHING_REQUEST, "1");
+                send(publicAddress, messageHeader.mConnectionID, RendezvousPacketType.UDP_HOLE_PUNCHING_REQUEST.toInt(), "1");
 
                 InetSocketAddress privateAddress = new InetSocketAddress(bodyArray[2], Integer.parseInt(bodyArray[3]));
-                send(privateAddress, messageHeader.mConnectionID, RendezvousPacketType.UDP_HOLE_PUNCHING_REQUEST, "0");
+                send(privateAddress, messageHeader.mConnectionID, RendezvousPacketType.UDP_HOLE_PUNCHING_REQUEST.toInt(), "0");
 
                 break;
             }
@@ -399,7 +402,7 @@ public class RendezvousClient extends Thread {
                     break;
                 }
 
-                send(remoteAddress, messageHeader.mConnectionID, RendezvousPacketType.UDP_HOLE_PUNCHING_RESPONSE, bodyArray[0]);
+                send(remoteAddress, messageHeader.mConnectionID, RendezvousPacketType.UDP_HOLE_PUNCHING_RESPONSE.toInt(), bodyArray[0]);
 
                 break;
             }
@@ -455,7 +458,7 @@ public class RendezvousClient extends Thread {
 
                 Log.d("scnet_android", "relay server: " + bodyArray[0] + ", " + bodyArray[1]);
                 InetSocketAddress relayAddress = new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1]));
-                send(relayAddress, messageHeader.mConnectionID, RendezvousPacketType.REGISTRATION_RELAY_PEER_REQUEST, bodyArray[2]);
+                send(relayAddress, messageHeader.mConnectionID, RendezvousPacketType.REGISTRATION_RELAY_PEER_REQUEST.toInt(), bodyArray[2]);
                 break;
             }
             case CONNECTION_RELAY_SERVICE_SUCCESS:
@@ -503,27 +506,35 @@ public class RendezvousClient extends Thread {
 
     }
 
-    public boolean send(int connectionID, RendezvousPacketType packetType, String data) throws IOException {
+    public boolean send(int connectionID, int packetType, String data) throws IOException {
 
         RendezvousSession rendezvousSession = rendezvousSessionArray.get(connectionID);
         if(rendezvousSession == null) {
             return false;
         }
 
-        if(rendezvousSession.privateAddress != null) {
-            send(rendezvousSession.privateAddress, connectionID, packetType, data);
-            return true;
-        }
-        else if(rendezvousSession.publicAddress != null) {
-            send(rendezvousSession.publicAddress, connectionID, packetType, data);
-            return true;
-        }
-        else if(rendezvousSession.relayAddress != null) {
-            send(rendezvousSession.relayAddress, connectionID, packetType, data);
-            return true;
+        InetSocketAddress remoteAddress = rendezvousSession.privateAddress != null ? rendezvousSession.privateAddress : (rendezvousSession.publicAddress != null ? rendezvousSession.publicAddress : rendezvousSession.relayAddress);
+        if(remoteAddress == null) {
+            return false;
         }
 
-        return false;
+        send(remoteAddress, connectionID, packetType, data);
+        return true;
+    }
+
+    public boolean send(int connectionID, MessageLite message) throws IOException {
+        RendezvousSession rendezvousSession = rendezvousSessionArray.get(connectionID);
+        if(rendezvousSession == null) {
+            return false;
+        }
+
+        InetSocketAddress remoteAddress = rendezvousSession.privateAddress != null ? rendezvousSession.privateAddress : (rendezvousSession.publicAddress != null ? rendezvousSession.publicAddress : rendezvousSession.relayAddress);
+        if(remoteAddress == null) {
+            return false;
+        }
+
+        send(remoteAddress, connectionID, message);
+        return true;
     }
 
     RendezvousSession getRendezvousSessionSafety(MessageHeader messageHeader) {
