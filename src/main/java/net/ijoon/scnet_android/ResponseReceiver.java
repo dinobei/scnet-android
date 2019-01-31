@@ -46,7 +46,7 @@ class ResponseReceiver extends Thread {
 
     @Override
     public void run() {
-        Log.d("scnet-android", "ResponseReceiver Thread Start");
+        Log.d("scnet_android", "ResponseReceiver Thread Start");
         if(mIsMainServerSession) mMainServerCallback.onAttached();
         else mServerManagerCallback.onAttached(mSessionIndex);
 
@@ -69,7 +69,7 @@ class ResponseReceiver extends Thread {
             }
         }
 
-        Log.d("scnet-android", "Finished ResponseReceiver Thread");
+        Log.d("scnet_android", "Finished ResponseReceiver Thread");
     }
 
     private void recvResponse(Stream stream) throws IOException {
@@ -103,6 +103,7 @@ class ResponseReceiver extends Thread {
         messageHeader.mPacketType = coded_input.readInt32();
         messageHeader.mMessageType = coded_input.readInt32();
         messageHeader.mCryptType = coded_input.readInt32();
+        messageHeader.mConnectionID = coded_input.readInt32();
 
         if(messageHeader.mDataSize > 0) {
             byte[] bodyBuf = stream.SafeRecv(messageHeader.mDataSize);
