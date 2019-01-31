@@ -1,16 +1,19 @@
 # SCNet-Android
-안드로이드(Java)용 네트워크 송수신 프레임워크 라이브러리
+안드로이드(Java)용 네트워크 송수신 라이브러리
 
 ## 개요
-C++, Swift, Java(Android), C# 에서 공용 헤더 사용으로 네트워크 송수신 과정 통합
+C++, Swift, Java(Android), C# 에서 패킷별 공용 헤더 사용으로 네트워크 송수신 과정 통합
 액티비티 상태에 따라 서버와의 커넥션을 자동으로 유지
 
 ## 기능
 - MSB Varint32 Encoding된 헤더 사용
 	- 암호화 기능
-	- 패킷 타입 지정 가능 (`protobuf`, flatBuffer, native byte array, utf8 string, ...)
+	- 메시지 타입 (`protobuf`, flatBuffer, `native byte array`, ...)
+	- 사용자 정의 패킷 타입 (ex: login:0, logout:1, ...)
 - 서버와의 연결상태에 따른 라이프사이클 콜백
 - 비동기 응답 콜백
+- 랑데뷰 클라이언트
+	- 사설IP를 사용하는 디바이스(스마트폰, 카메라 등)와의 통신을 위해 모든 NAT 타입을 지원하는 연결 프로토콜 구현체 (RendezvousClient)
 
 ## 라이브러리 연동 방법
 (1) ~/app/src/main/proto/ 에 사용할 프로토버퍼 메시지가 정의된 `.proto` 파일 추가
@@ -37,7 +40,7 @@ dependencies {
 
 ```
 $ cd MyApp // 내 앱 최상위 경로로 이동
-$ git add submodule http://works.ijoon.net/Developer/SCNet-Android scnet-android
+$ git submodule add http://works.ijoon.net/Developer/SCNet-Android scnet-android
 ```
 
 settings.gradle 파일을 다음과 같이 수정한 뒤 sync now 버튼 클릭
@@ -116,6 +119,7 @@ public class CustomApplication extends GlobalApplication {
 - 콜백 수신을 위한 함수 등록
 	- 액티비티 부모클래스를 AppCompatActivity 대신 SCNetAppCompatActivity로 변경
 	- SCNetClientCallback 인터페이스에 정의된 함수 오버라이딩 (onAttaching, onAttached, onAttachFailed, onDetach, onResponse)
+
 ```java
 class MainActivity extends SCNetAppCompatActivity {
 	@Override
@@ -178,7 +182,9 @@ class MainActivity extends SCNetAppCompatActivity {
     }
 }
 ```
-- 메시지 전송 예제 
+
+- 메시지 전송 예제
+
 ```java
 ProtoMessage.packet_1 packet1 = ProtoMessage.packet_1
                                     .newBuilder()         
@@ -189,6 +195,7 @@ mMyApplication.request(packet1);
 
 ## ServerManager를 이용한 외부서버(카메라 등) 연동
 - 원하는 액티비티에서 ServerManagerCallback 인터페이스 구현
+
 ```java
 class MainActivity extends SCNetAppCompatActivity implement ServerManagerCallback {
     @Override
@@ -254,11 +261,13 @@ class MainActivity extends SCNetAppCompatActivity implement ServerManagerCallbac
 ```
 
 - 외부 서버에 연결
+
 ```java
 int sessionIndex = ServerManager.getInstance().attach(<External Server IP>, <External Server Port>, <Socket Timeout>, <ServerManagerCallback>);
 ```
 
 - 외부 서버로 패킷 전송
+
 ```java
 ProtoMessage.packet_1 p = ProtoMessage.packet_1
         .newBuilder()
