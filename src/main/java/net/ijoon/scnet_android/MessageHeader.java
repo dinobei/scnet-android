@@ -24,6 +24,32 @@ public final class MessageHeader {
     public final static int HEADER_ELEMENTS = 5;
     public final static int MAX_PACKET_HEADER_SIZE = (7 * HEADER_ELEMENTS);
 
+    public enum MessageType {
+        TYPE_NONE(-1),
+        PROTOBUF(0),
+        RAWBYTE(1),
+        RAWBYTE_RELAY(2),
+        PROTOBUF_RELAY(3);
+
+        private final int code;
+
+        MessageType(int code) {
+            this.code = code;
+        }
+
+        public int toInt() {
+            return this.code;
+        }
+
+        public static MessageType  fromInt(int value) {
+            for (MessageType  code : MessageType .values())
+                if (code.toInt() == value)
+                    return code;
+
+            return TYPE_NONE;
+        }
+    }
+
     public int mDataSize;
     public int mPacketType;
     public int mMessageType;

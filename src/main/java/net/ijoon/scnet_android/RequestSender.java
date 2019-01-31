@@ -41,7 +41,7 @@ public class RequestSender extends Thread {
 
     @Override
     public void run() {
-        Log.d("scnet-android", "RequestSender Thread Start");
+        Log.d("scnet_android", "RequestSender Thread Start");
         while(!isInterrupted()) {
             try {
                 MessageLite message = mBlockingQueue.take();
@@ -53,7 +53,7 @@ public class RequestSender extends Thread {
                 break;
             }
         }
-        Log.d("scnet-android", "Finished RequestSender Thread");
+        Log.d("scnet_android", "Finished RequestSender Thread");
         if(mResponseReceiver != null) mResponseReceiver.interrupt();
     }
 
@@ -68,6 +68,7 @@ public class RequestSender extends Thread {
             coded_output.writeInt32NoTag(Registry.GetPacketType(message)); // packet type
             coded_output.writeInt32NoTag(0); // message type
             coded_output.writeInt32NoTag(0); // crypt type
+            coded_output.writeInt32NoTag(0); // connection id
             message.writeTo(coded_output);
         } catch (IOException e) {
             e.printStackTrace();
