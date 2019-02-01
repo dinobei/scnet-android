@@ -37,9 +37,14 @@ public class Stream {
 
         if(selector.select(socketTimeoutMilis) > 0) {
             if(clientKey.isConnectable()) {
-                if(!mSocketChannel.finishConnect()) {
+                try {
+                    if(!mSocketChannel.finishConnect()) {
+                        throw new IOException("finishConnect() failed");
+                    }
+                }
+                catch (IOException e) {
                     safeClose(selector);
-                    throw new IOException("finishConnect() failed");
+                    throw new IOException("IOException in finishConnect()");
                 }
 
                 mSelector = Selector.open();
