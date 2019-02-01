@@ -540,7 +540,7 @@ public class RendezvousClient extends Thread {
     RendezvousSession getRendezvousSessionSafety(MessageHeader messageHeader) {
         RendezvousSession rendezvousSession = rendezvousSessionArray.get(messageHeader.mConnectionID);
         if(rendezvousSession == null) {
-            rendezvousSession = new RendezvousSession(this, messageHeader.mConnectionID);
+            rendezvousSession = new RendezvousSession(messageHeader.mConnectionID);
             rendezvousSessionArray.append(messageHeader.mConnectionID, rendezvousSession);
         }
 

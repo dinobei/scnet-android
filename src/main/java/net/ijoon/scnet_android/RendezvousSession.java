@@ -5,14 +5,11 @@ public class RendezvousSession {
 
     int connectionID;
 
-    RendezvousClient rendezvousClient;
-
     InetSocketAddress publicAddress;
     InetSocketAddress privateAddress;
     InetSocketAddress relayAddress;
 
-    RendezvousSession(RendezvousClient rendezvousClient, int connectionID) {
-        this.rendezvousClient = rendezvousClient;
+    RendezvousSession(int connectionID) {
         this.connectionID = connectionID;
     }
 
