@@ -166,13 +166,11 @@ public class RendezvousClient extends Thread {
                             kcpPeer.kcp.Update(current);
                             kcpPeer.next = kcpPeer.kcp.Check(current);
                         }
-
-                        try {
-                            Thread.sleep(10);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-
+                    }
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
                     }
                 }
 
