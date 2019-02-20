@@ -7,18 +7,20 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.Date;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class KCPPeer {
     InetSocketAddress address;
     int connectionID;
     KCP kcp;
     long next;
+    ReentrantLock lock;
 
     KCPPeer(final DatagramChannel datagramChannel, InetSocketAddress inetSocketAddress) {
         address = inetSocketAddress;
         connectionID = 0;
         next = new Date().getTime();
-
+        lock = new ReentrantLock();
         kcp = new KCP(0x11223344) {
             @Override
             protected void output(byte[] buffer, int size) {

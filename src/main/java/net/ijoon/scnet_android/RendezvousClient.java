@@ -134,7 +134,9 @@ public class RendezvousClient extends Thread {
                             kcpPeerMap.put(key, kcpPeer);
                         }
 
+                        kcpPeer.lock.lock();
                         kcpPeer.kcp.Input(buffer);
+                        kcpPeer.lock.unlock();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -151,6 +153,7 @@ public class RendezvousClient extends Thread {
                 while(!isInterrupted()) {
                     HashMap<String, KCPPeer> copiedMap = new HashMap<>(kcpPeerMap);
                     for(KCPPeer kcpPeer: copiedMap.values()) {
+                        kcpPeer.lock.lock();
                         int size = kcpPeer.kcp.Recv(buffer);
                         if(size > 0) {
                             // Callback
@@ -166,6 +169,8 @@ public class RendezvousClient extends Thread {
                             kcpPeer.kcp.Update(current);
                             kcpPeer.next = kcpPeer.kcp.Check(current);
                         }
+
+                        kcpPeer.lock.unlock();
                     }
                     try {
                         Thread.sleep(10);
@@ -208,7 +213,9 @@ public class RendezvousClient extends Thread {
             e.printStackTrace();
         }
 
+        kcpPeer.lock.lock();
         kcpPeer.kcp.Send(Arrays.copyOf(serialized, coded_output.getTotalBytesWritten()));
+        kcpPeer.lock.unlock();
     }
 
     private void send(KCPPeer kcpPeer, MessageLite message) throws IOException {
@@ -228,7 +235,9 @@ public class RendezvousClient extends Thread {
             e.printStackTrace();
         }
 
+        kcpPeer.lock.lock();
         kcpPeer.kcp.Send(Arrays.copyOf(serialized, coded_output.getTotalBytesWritten()));
+        kcpPeer.lock.unlock();
     }
 
     private void callback(KCPPeer kcpPeer, byte[] buffer) throws IOException {
