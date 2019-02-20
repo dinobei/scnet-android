@@ -20,6 +20,8 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Set;
 
 public class RendezvousClient extends Thread {
 
@@ -147,7 +149,8 @@ public class RendezvousClient extends Thread {
             public void run() {
                 byte[] buffer = new byte[100000];
                 while(!isInterrupted()) {
-                    for (KCPPeer kcpPeer: kcpPeerMap.values()) {
+                    HashMap<String, KCPPeer> copiedMap = new HashMap<>(kcpPeerMap);
+                    for(KCPPeer kcpPeer: copiedMap.values()) {
                         int size = kcpPeer.kcp.Recv(buffer);
                         if(size > 0) {
                             // Callback
