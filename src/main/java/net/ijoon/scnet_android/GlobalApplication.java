@@ -24,6 +24,12 @@ public class GlobalApplication extends Application implements SCNetClientCallbac
     int mServPort = 0;
     int mSocketTimeoutMillis = 1000;
 
+    boolean useAutoServerSession;
+
+    public void setUseAutoServerSession(boolean useAutoServerSession) {
+        this.useAutoServerSession = useAutoServerSession;
+    }
+
     public void setMainServerInfo(String ip, int port, int socketTimeoutMillis)
     {
         this.mServIP = ip;
@@ -34,7 +40,7 @@ public class GlobalApplication extends Application implements SCNetClientCallbac
     @Override
     public void onCreate() {
         super.onCreate();
-        if(mServIP == null) {
+        if(useAutoServerSession && mServIP == null) {
             throw new RuntimeException("Server information must be set.");
         }
         this.mMyActivityLifecycleCallbacks = new MyActivityLifecycleCallbacks();
@@ -85,8 +91,10 @@ public class GlobalApplication extends Application implements SCNetClientCallbac
             if (++running == 1) {
                 // running activity is 1,
                 // app must be returned from background just now (or first launch)
-                mServerSession = new ServerSession(mServIP, mServPort, mSocketTimeoutMillis, GlobalApplication.this);
-                mServerSession.start();
+                if(useAutoServerSession) {
+                    mServerSession = new ServerSession(mServIP, mServPort, mSocketTimeoutMillis, GlobalApplication.this);
+                    mServerSession.start();
+                }
             } else if (running > 1) {
                 // 2 or more running activities,
                 // should be foreground already.
@@ -108,7 +116,9 @@ public class GlobalApplication extends Application implements SCNetClientCallbac
             if (--running == 0) {
                 // no active activity
                 // app goes to background
-                mServerSession.interrupt();
+                if(useAutoServerSession) {
+                    mServerSession.interrupt();
+                }
             }
         }
 
@@ -122,6 +132,9 @@ public class GlobalApplication extends Application implements SCNetClientCallbac
     }
 
     public void request(MessageLite message) {
+        if(!useAutoServerSession) {
+            throw new RuntimeException("call setUseAutoServerSession(true) if you want to use this method");
+        }
         mServerSession.request(message);
     }
 }
