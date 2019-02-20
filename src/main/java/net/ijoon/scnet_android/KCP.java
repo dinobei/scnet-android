@@ -11,6 +11,8 @@
 //=====================================================================
 package net.ijoon.scnet_android;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 
 public abstract class KCP {
@@ -54,31 +56,31 @@ public abstract class KCP {
 
     /* encode 16 bits unsigned int (msb) */
     public static void ikcp_encode16u(byte[] p, int offset, int w) {
-        p[offset + 0] = (byte) (w >> 8);
-        p[offset + 1] = (byte) (w >> 0);
+        p[offset + 0] = (byte) (w >> 0);
+        p[offset + 1] = (byte) (w >> 8);
     }
 
     /* decode 16 bits unsigned int (msb) */
     public static int ikcp_decode16u(byte[] p, int offset) {
-        int ret = (p[offset + 0] & 0xFF) << 8
-                | (p[offset + 1] & 0xFF);
+        int ret = (p[offset + 0] & 0xFF)
+                | (p[offset + 1] & 0xFF) << 8;
         return ret;
     }
 
     /* encode 32 bits unsigned int (msb) */
     public static void ikcp_encode32u(byte[] p, int offset, long l) {
-        p[offset + 0] = (byte) (l >> 24);
-        p[offset + 1] = (byte) (l >> 16);
-        p[offset + 2] = (byte) (l >> 8);
-        p[offset + 3] = (byte) (l >> 0);
+        p[offset + 0] = (byte) (l >> 0);
+        p[offset + 1] = (byte) (l >> 8);
+        p[offset + 2] = (byte) (l >> 16);
+        p[offset + 3] = (byte) (l >> 24);
     }
 
     /* decode 32 bits unsigned int (msb) */
     public static long ikcp_decode32u(byte[] p, int offset) {
-        long ret = (p[offset + 0] & 0xFFL) << 24
-                | (p[offset + 1] & 0xFFL) << 16
-                | (p[offset + 2] & 0xFFL) << 8
-                | p[offset + 3] & 0xFFL;
+        long ret = (p[offset + 0] & 0xFFL)
+                | (p[offset + 1] & 0xFFL) << 8
+                | (p[offset + 2] & 0xFFL) << 16
+                | (p[offset + 3] & 0xFFL) << 24;
         return ret;
     }
 
