@@ -15,4 +15,9 @@ public class RendezvousSession {
     boolean isConnected() {
         return relayKCPPeer != null || publicKCPPeer != null || privateKCPPeer != null;
     }
+
+    public int getConnectionID() { return connectionID; }
+    public String getPublicAddress() { return publicKCPPeer.getKey(); }
+    public String getPrivateAddress() { return privateKCPPeer.getKey(); }
+    public String getRelayAddress() { return relayKCPPeer.getKey(); }
 }
