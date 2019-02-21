@@ -158,7 +158,7 @@ public class RendezvousClient extends Thread {
                         if(size > 0) {
                             // Callback
                             try {
-                                callback(kcpPeer, Arrays.copyOf(buffer, size));
+                                callback(kcpPeer, buffer, size);
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
@@ -240,7 +240,7 @@ public class RendezvousClient extends Thread {
         kcpPeer.lock.unlock();
     }
 
-    private void callback(KCPPeer kcpPeer, byte[] buffer) throws IOException {
+    private void callback(KCPPeer kcpPeer, byte[] buffer, int size) throws IOException {
         if(!MessageHeader.isValidMagicPacket(buffer)) {
             throw new IOException("Invalid magic packet");
         }
@@ -263,7 +263,7 @@ public class RendezvousClient extends Thread {
         switch (messageType) {
             case PROTOBUF:
                 if(rendezvousClientCallback != null) {
-                    byte[] bodyByteArray = Arrays.copyOfRange(buffer, coded_input.getTotalBytesRead(), buffer.length);
+                    byte[] bodyByteArray = Arrays.copyOfRange(buffer, coded_input.getTotalBytesRead(), size);
                     rendezvousClientCallback.onMessage(messageHeader, bodyByteArray);
                 }
                 return;
@@ -273,7 +273,7 @@ public class RendezvousClient extends Thread {
                 if(rendezvousPacketType != RendezvousPacketType.NONE) break;
 
                 if(rendezvousClientCallback != null) {
-                    byte[] bodyByteArray = Arrays.copyOfRange(buffer, coded_input.getTotalBytesRead(), buffer.length);
+                    byte[] bodyByteArray = Arrays.copyOfRange(buffer, coded_input.getTotalBytesRead(), size);
                     rendezvousClientCallback.onMessage(messageHeader, bodyByteArray);
                 }
 
