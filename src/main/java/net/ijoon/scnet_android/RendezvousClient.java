@@ -189,6 +189,10 @@ public class RendezvousClient extends Thread {
     }
 
     private void send(KCPPeer kcpPeer, int packetType, String data) throws IOException {
+        send(kcpPeer, packetType, data, false);
+    }
+
+    private void send(KCPPeer kcpPeer, int packetType, String data, boolean isRelay) throws IOException {
         ByteBuffer byteBuffer = null;
         int dataSize = 0;
         if(data != null) {
@@ -199,11 +203,12 @@ public class RendezvousClient extends Thread {
         byte []serialized = new byte[MessageHeader.MAGIC_PACKET.length + dataSize + MessageHeader.MAX_PACKET_HEADER_SIZE];
         CodedOutputStream coded_output = CodedOutputStream.newInstance(serialized, 0, serialized.length);
 
+        MessageHeader.MessageType messageType = isRelay ? MessageHeader.MessageType.RAWBYTE_RELAY : MessageHeader.MessageType.RAWBYTE;
         try {
             coded_output.writeRawBytes(MessageHeader.MAGIC_PACKET);
             coded_output.writeInt32NoTag(dataSize); // data size
             coded_output.writeInt32NoTag(packetType); // packet type
-            coded_output.writeInt32NoTag(MessageHeader.MessageType.RAWBYTE.toInt()); // message type
+            coded_output.writeInt32NoTag(messageType.toInt()); // message type
             coded_output.writeInt32NoTag(0); // crypt type
             coded_output.writeInt32NoTag(kcpPeer.connectionID); // connectionID
             if(data != null) {
@@ -219,15 +224,20 @@ public class RendezvousClient extends Thread {
     }
 
     private void send(KCPPeer kcpPeer, MessageLite message) throws IOException {
+        send(kcpPeer, message, false);
+    }
+
+    private void send(KCPPeer kcpPeer, MessageLite message, boolean isRelay) throws IOException {
         int dataSize = message.getSerializedSize();
         byte []serialized = new byte[MessageHeader.MAGIC_PACKET.length + dataSize + MessageHeader.MAX_PACKET_HEADER_SIZE];
         CodedOutputStream coded_output = CodedOutputStream.newInstance(serialized, 0, serialized.length);
 
+        MessageHeader.MessageType messageType = isRelay ? MessageHeader.MessageType.PROTOBUF_RELAY : MessageHeader.MessageType.PROTOBUF;
         try {
             coded_output.writeRawBytes(MessageHeader.MAGIC_PACKET);
             coded_output.writeInt32NoTag(dataSize); // data size
             coded_output.writeInt32NoTag(Registry.GetPacketType(message)); // packet type
-            coded_output.writeInt32NoTag(MessageHeader.MessageType.PROTOBUF.toInt()); // message type
+            coded_output.writeInt32NoTag(messageType.toInt()); // message type
             coded_output.writeInt32NoTag(0); // crypt type
             coded_output.writeInt32NoTag(kcpPeer.connectionID); // connection id
             message.writeTo(coded_output);
@@ -659,7 +669,12 @@ public class RendezvousClient extends Thread {
             return false;
         }
 
-        send(kcpPeer, packetType, data);
+        if(rendezvousSession.privateKCPPeer == null && rendezvousSession.publicKCPPeer == null) {
+            send(kcpPeer, packetType, data, true);
+        }
+        else {
+            send(kcpPeer, packetType, data);
+        }
         return true;
     }
 
@@ -674,7 +689,12 @@ public class RendezvousClient extends Thread {
             return false;
         }
 
-        send(kcpPeer, message);
+        if(rendezvousSession.privateKCPPeer == null && rendezvousSession.publicKCPPeer == null) {
+            send(kcpPeer, message, true);
+        }
+        else {
+            send(kcpPeer, message);
+        }
         return true;
     }
 
