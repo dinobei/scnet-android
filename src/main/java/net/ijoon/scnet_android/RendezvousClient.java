@@ -365,9 +365,12 @@ public class RendezvousClient extends Thread {
 
                 Log.d("scnet_android", "directly connected from " + kcpPeer.getKey());
 
-                if(!isConnected) {
-                    if(rendezvousClientCallback != null) {
-                        rendezvousClientCallback.onConnected(messageHeader.mConnectionID);
+                if(rendezvousClientCallback != null) {
+                    if(!isConnected) {
+                        rendezvousClientCallback.onConnected(rendezvousSession, Connection.DIRECT_CONNECTION);
+                    }
+                    else {
+                        rendezvousClientCallback.onConnectionUpdate(rendezvousSession, Connection.DIRECT_CONNECTION);
                     }
                 }
 
@@ -393,9 +396,12 @@ public class RendezvousClient extends Thread {
                 targetKCPPeer.connectionID = messageHeader.mConnectionID;
 
                 Log.d("scnet_android", "directly connected from " + kcpPeer.getKey());
-                if(!isConnected) {
-                    if(rendezvousClientCallback != null) {
-                        rendezvousClientCallback.onConnected(messageHeader.mConnectionID);
+                if(rendezvousClientCallback != null) {
+                    if(!isConnected) {
+                        rendezvousClientCallback.onConnected(rendezvousSession, Connection.DIRECT_CONNECTION);
+                    }
+                    else {
+                        rendezvousClientCallback.onConnectionUpdate(rendezvousSession, Connection.DIRECT_CONNECTION);
                     }
                 }
 
@@ -448,9 +454,12 @@ public class RendezvousClient extends Thread {
                 rendezvousSession.publicKCPPeer = kcpPeer;
                 Log.d("scnet_android", "reversely connected from " + kcpPeer.getKey());
 
-                if(!isConnected) {
-                    if(rendezvousClientCallback != null) {
-                        rendezvousClientCallback.onConnected(messageHeader.mConnectionID);
+                if(rendezvousClientCallback != null) {
+                    if(!isConnected) {
+                        rendezvousClientCallback.onConnected(rendezvousSession, Connection.REVERSE_CONNECTION);
+                    }
+                    else {
+                        rendezvousClientCallback.onConnectionUpdate(rendezvousSession, Connection.REVERSE_CONNECTION);
                     }
                 }
                 break;
@@ -464,9 +473,12 @@ public class RendezvousClient extends Thread {
                 rendezvousSession.publicKCPPeer = kcpPeer;
                 Log.d("scnet_android", "reversely connected from " + kcpPeer.getKey());
 
-                if(!isConnected) {
-                    if(rendezvousClientCallback != null) {
-                        rendezvousClientCallback.onConnected(messageHeader.mConnectionID);
+                if(rendezvousClientCallback != null) {
+                    if(!isConnected) {
+                        rendezvousClientCallback.onConnected(rendezvousSession, Connection.REVERSE_CONNECTION);
+                    }
+                    else {
+                        rendezvousClientCallback.onConnectionUpdate(rendezvousSession, Connection.REVERSE_CONNECTION);
                     }
                 }
                 break;
@@ -542,20 +554,26 @@ public class RendezvousClient extends Thread {
                 boolean isPublic = Integer.parseInt(bodyArray[0]) == 1;
                 RendezvousSession rendezvousSession = getRendezvousSessionSafety(messageHeader);
                 boolean isConnected = rendezvousSession.isConnected();
+                Connection connection;
                 if(isPublic) {
                     // public connection (common connection)
                     rendezvousSession.publicKCPPeer = kcpPeer;
+                    connection = Connection.UDP_HOLE_PUNCHING;
                     Log.d("scnet_android", "udp hole punching success from " + kcpPeer.getKey());
                 }
                 else {
                     // private connection (equal net, or hole punching)
                     rendezvousSession.privateKCPPeer = kcpPeer;
+                    connection = Connection.EQUAL_NAT;
                     Log.d("scnet_android", "connected under equal NAT from " + kcpPeer.getKey());
                 }
 
-                if(!isConnected) {
-                    if(rendezvousClientCallback != null) {
-                        rendezvousClientCallback.onConnected(messageHeader.mConnectionID);
+                if(rendezvousClientCallback != null) {
+                    if(!isConnected) {
+                        rendezvousClientCallback.onConnected(rendezvousSession, connection);
+                    }
+                    else {
+                        rendezvousClientCallback.onConnectionUpdate(rendezvousSession, connection);
                     }
                 }
 
@@ -621,7 +639,7 @@ public class RendezvousClient extends Thread {
                 rendezvousSession.relayKCPPeer = relayKCPPeer;
                 Log.d("scnet_android", "connected by a relay from " + KCPPeer.getKey(bodyArray[0], bodyArray[1]));
                 if(rendezvousClientCallback != null) {
-                    rendezvousClientCallback.onConnected(messageHeader.mConnectionID);
+                    rendezvousClientCallback.onConnected(rendezvousSession, Connection.RELAY);
                 }
 
                 break;
