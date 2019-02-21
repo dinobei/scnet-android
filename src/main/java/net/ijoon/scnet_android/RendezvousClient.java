@@ -25,18 +25,23 @@ import java.util.Set;
 
 public class RendezvousClient extends Thread {
 
-    DatagramChannel datagramChannel;
-    String rendezvousServerIP;
-    int rendezvousServerPort;
+    private DatagramChannel datagramChannel;
+    private String rendezvousServerIP;
+    private int rendezvousServerPort;
 
     public RendezvousClientCallback rendezvousClientCallback;
 
-    ByteBuffer byteBuffer = ByteBuffer.allocate(65535);
+    private ByteBuffer byteBuffer = ByteBuffer.allocate(65535);
 
-    SparseArray<RendezvousSession> rendezvousSessionArray = new SparseArray<>();
-    HashMap<String, KCPPeer> kcpPeerMap = new HashMap<>();
+    private SparseArray<RendezvousSession> rendezvousSessionArray = new SparseArray<>();
+    private HashMap<String, KCPPeer> kcpPeerMap = new HashMap<>();
 
     private KCPPeer serverKCPPeer;
+
+    private Thread registerThread;
+    private Thread rawRecvThread;
+    private Thread recvThread;
+    private boolean isRunning;
 
     public final static int TYPE_INET4ADDRESS = 1;
     public final static int TYPE_INET6ADDRESS = 2;
@@ -90,7 +95,7 @@ public class RendezvousClient extends Thread {
         kcpPeerMap.put(serverKCPPeer.getKey(), serverKCPPeer);
 
         // register thread
-        new Thread(new Runnable() {
+        registerThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 String localAddress = getLocalIpAddress(TYPE_INET4ADDRESS);
@@ -105,14 +110,16 @@ public class RendezvousClient extends Thread {
                         e.printStackTrace();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
+                        break;
                     }
                 }
 
             }
-        }).start();
+        });
+        registerThread.start();
 
         // Raw recv thread
-        new Thread(new Runnable() {
+        rawRecvThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 while(!isInterrupted()) {
@@ -139,14 +146,16 @@ public class RendezvousClient extends Thread {
                         kcpPeer.lock.unlock();
                     } catch (IOException e) {
                         e.printStackTrace();
+                        break;
                     }
                 }
 
             }
-        }).start();
+        });
+        rawRecvThread.start();
 
         // recv thread
-        new Thread(new Runnable() {
+        recvThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 byte[] buffer = new byte[100000];
@@ -176,16 +185,44 @@ public class RendezvousClient extends Thread {
                         Thread.sleep(10);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
+                        break;
                     }
                 }
 
             }
-        }).start();
+        });
+        recvThread.start();
+
+        isRunning = true;
     }
 
-    @Override
-    public void run() {
 
+    public void finish() {
+        registerThread.interrupt();
+        rawRecvThread.interrupt();
+        recvThread.interrupt();
+
+
+        try {
+            datagramChannel.close();
+
+            registerThread.join();
+            rawRecvThread.join();
+            recvThread.join();
+
+            kcpPeerMap.clear();
+            rendezvousSessionArray.clear();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        isRunning = false;
+    }
+
+    public boolean getIsRunning() {
+        return isRunning;
     }
 
     private void send(KCPPeer kcpPeer, int packetType, String data) throws IOException {
