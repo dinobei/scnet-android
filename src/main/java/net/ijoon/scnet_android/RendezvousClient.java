@@ -78,6 +78,19 @@ public class RendezvousClient extends Thread {
         rendezvousServerPort = port;
     }
 
+    private KCPPeer getKcpPeer(InetSocketAddress address) {
+        String key = KCPPeer.getKey(address);
+        KCPPeer kcpPeer;
+        if(kcpPeerMap.containsKey(key)) {
+            kcpPeer = kcpPeerMap.get(key);
+        }
+        else {
+            kcpPeer = new KCPPeer(datagramChannel, address);
+            kcpPeerMap.put(key, kcpPeer);
+        }
+        return kcpPeer;
+    }
+
     @Override
     public synchronized void start() {
         try {
@@ -87,12 +100,7 @@ public class RendezvousClient extends Thread {
             throw new RuntimeException("Can't create datagram channel");
         }
 
-        serverKCPPeer = new KCPPeer(datagramChannel, new InetSocketAddress(rendezvousServerIP, rendezvousServerPort));
-        if(serverKCPPeer.getKey() == null) {
-            throw new RuntimeException("getKey() return null");
-        }
-
-        kcpPeerMap.put(serverKCPPeer.getKey(), serverKCPPeer);
+        serverKCPPeer = getKcpPeer(new InetSocketAddress(rendezvousServerIP, rendezvousServerPort));
 
         // register thread
         registerThread = new Thread(new Runnable() {
@@ -130,16 +138,7 @@ public class RendezvousClient extends Thread {
 
                         byte[] buffer = byteBuffer.array();
 
-
-                        String key = KCPPeer.getKey(remoteAddress);
-                        KCPPeer kcpPeer;
-                        if(kcpPeerMap.containsKey(key)) {
-                            kcpPeer = kcpPeerMap.get(key);
-                        }
-                        else {
-                            kcpPeer = new KCPPeer(datagramChannel, remoteAddress);
-                            kcpPeerMap.put(key, kcpPeer);
-                        }
+                        KCPPeer kcpPeer = getKcpPeer(remoteAddress);
 
                         kcpPeer.lock.lock();
                         kcpPeer.kcp.Input(buffer);
@@ -375,15 +374,8 @@ public class RendezvousClient extends Thread {
                     rendezvousClientCallback.onConnecting(messageHeader.mConnectionID);
                 }
 
-                String targetKcpPeerKey = KCPPeer.getKey(bodyArray[0], bodyArray[1]);
-                KCPPeer targetKCPPeer;
-                if(kcpPeerMap.containsKey(targetKcpPeerKey)) {
-                    targetKCPPeer = kcpPeerMap.get(targetKcpPeerKey);
-                }
-                else {
-                    targetKCPPeer = new KCPPeer(datagramChannel, new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1])));
-                    kcpPeerMap.put(targetKcpPeerKey, targetKCPPeer);
-                }
+                InetSocketAddress address = new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1]));
+                KCPPeer targetKCPPeer = getKcpPeer(address);
                 send(targetKCPPeer, messageHeader.mConnectionID, RendezvousPacketType.DIRECT_CONNECTION_REQUEST, null);
                 break;
             }
@@ -416,16 +408,7 @@ public class RendezvousClient extends Thread {
 
                 RendezvousSession rendezvousSession = getRendezvousSessionSafety(messageHeader);
                 boolean isConnected = rendezvousSession.isConnected();
-
-                KCPPeer targetKCPPeer;
-                String targetKcpPeerKey = kcpPeer.getKey();
-                if(kcpPeerMap.containsKey(targetKcpPeerKey)) {
-                    targetKCPPeer = kcpPeerMap.get(targetKcpPeerKey);
-                }
-                else {
-                    targetKCPPeer = new KCPPeer(datagramChannel, kcpPeer.address);
-                    kcpPeerMap.put(targetKcpPeerKey, targetKCPPeer);
-                }
+                rendezvousSession.publicKCPPeer = kcpPeer;
 
                 Log.d("scnet_android", "directly connected from " + kcpPeer.getKey());
                 if(rendezvousClientCallback != null) {
@@ -459,16 +442,8 @@ public class RendezvousClient extends Thread {
                     break;
                 }
 
-                KCPPeer sourceKCPPeer;
-                String sourceKcpPeerKey = KCPPeer.getKey(bodyArray[0], bodyArray[1]);
-                if(kcpPeerMap.containsKey(sourceKcpPeerKey)) {
-                    sourceKCPPeer = kcpPeerMap.get(sourceKcpPeerKey);
-                }
-                else {
-                    sourceKCPPeer = new KCPPeer(datagramChannel, new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1])));
-                    kcpPeerMap.put(sourceKcpPeerKey, sourceKCPPeer);
-                }
-
+                InetSocketAddress sourceAddress = new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1]));
+                KCPPeer sourceKCPPeer = getKcpPeer(sourceAddress);
                 send(sourceKCPPeer, messageHeader.mConnectionID, RendezvousPacketType.REVERSE_CONNECTION_REQUEST, null);
 
                 break;
@@ -532,26 +507,12 @@ public class RendezvousClient extends Thread {
                     }
                 }
 
-                KCPPeer publicKCPPeer;
-                String publicKcpPeerKey = KCPPeer.getKey(bodyArray[0], bodyArray[1]);
-                if(kcpPeerMap.containsKey(publicKcpPeerKey)) {
-                    publicKCPPeer = kcpPeerMap.get(publicKcpPeerKey);
-                }
-                else {
-                    publicKCPPeer = new KCPPeer(datagramChannel, new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1])));
-                    kcpPeerMap.put(publicKcpPeerKey, publicKCPPeer);
-                }
+                InetSocketAddress publicAddress = new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1]));
+                KCPPeer publicKCPPeer = getKcpPeer(publicAddress);
                 send(publicKCPPeer, messageHeader.mConnectionID, RendezvousPacketType.UDP_HOLE_PUNCHING_REQUEST, "1");
 
-                KCPPeer privateKCPPeer;
-                String privateKcpPeerKey = KCPPeer.getKey(bodyArray[2], bodyArray[3]);
-                if(kcpPeerMap.containsKey(privateKcpPeerKey)) {
-                    privateKCPPeer = kcpPeerMap.get(privateKcpPeerKey);
-                }
-                else {
-                    privateKCPPeer = new KCPPeer(datagramChannel, new InetSocketAddress(bodyArray[2], Integer.parseInt(bodyArray[3])));
-                    kcpPeerMap.put(privateKcpPeerKey, privateKCPPeer);
-                }
+                InetSocketAddress privateAddress = new InetSocketAddress(bodyArray[2], Integer.parseInt(bodyArray[3]));
+                KCPPeer privateKCPPeer = getKcpPeer(privateAddress);
                 send(privateKCPPeer, messageHeader.mConnectionID, RendezvousPacketType.UDP_HOLE_PUNCHING_REQUEST, "0");
 
                 break;
@@ -628,16 +589,8 @@ public class RendezvousClient extends Thread {
 
                 Log.d("scnet_android", "relay server: " + bodyArray[0] + ", " + bodyArray[1]);
 
-                KCPPeer relayKCPPeer;
-                String relayKcpPeerKey = KCPPeer.getKey(bodyArray[0], bodyArray[1]);
-                if(kcpPeerMap.containsKey(relayKcpPeerKey)) {
-                    relayKCPPeer = kcpPeerMap.get(relayKcpPeerKey);
-                }
-                else {
-                    relayKCPPeer = new KCPPeer(datagramChannel, new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1])));
-                    kcpPeerMap.put(relayKcpPeerKey, relayKCPPeer);
-                }
-
+                InetSocketAddress relayAddress = new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1]));
+                KCPPeer relayKCPPeer = getKcpPeer(relayAddress);
                 send(relayKCPPeer, messageHeader.mConnectionID, RendezvousPacketType.REGISTRATION_RELAY_PEER_REQUEST, bodyArray[2]);
                 break;
             }
@@ -653,17 +606,8 @@ public class RendezvousClient extends Thread {
 
                 RendezvousSession rendezvousSession = getRendezvousSessionSafety(messageHeader);
 
-                KCPPeer relayKCPPeer;
-                String relayKcpPeerKey = KCPPeer.getKey(bodyArray[0], bodyArray[1]);
-                if(kcpPeerMap.containsKey(relayKcpPeerKey)) {
-                    relayKCPPeer = kcpPeerMap.get(relayKcpPeerKey);
-                }
-                else {
-                    relayKCPPeer = new KCPPeer(datagramChannel, new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1])));
-                    kcpPeerMap.put(relayKcpPeerKey, relayKCPPeer);
-                }
-
-                rendezvousSession.relayKCPPeer = relayKCPPeer;
+                InetSocketAddress relayAddress = new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1]));
+                rendezvousSession.relayKCPPeer = getKcpPeer(relayAddress);
                 Log.d("scnet_android", "connected by a relay from " + KCPPeer.getKey(bodyArray[0], bodyArray[1]));
                 if(rendezvousClientCallback != null) {
                     rendezvousClientCallback.onConnected(rendezvousSession, Connection.RELAY);
