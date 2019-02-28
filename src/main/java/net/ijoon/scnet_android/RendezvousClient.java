@@ -103,7 +103,7 @@ public class RendezvousClient extends Thread {
 
                 while(!isInterrupted()) {
                     try {
-                        send(serverKCPPeer, RendezvousPacketType.REGISTRATION_RENDEZVOUS_CLIENT_REQUEST.toInt(), localAddress + " " + localPort);
+                        send(serverKCPPeer, 0, RendezvousPacketType.REGISTRATION_RENDEZVOUS_CLIENT_REQUEST, localAddress + " " + localPort);
                         Thread.sleep(30*1000);
 
                     } catch (IOException e) {
@@ -225,11 +225,11 @@ public class RendezvousClient extends Thread {
         return isRunning;
     }
 
-    private void send(KCPPeer kcpPeer, int packetType, String data) throws IOException {
-        send(kcpPeer, packetType, data, false);
+    private void send(KCPPeer kcpPeer, int connectionID, RendezvousPacketType packetType, String data) throws IOException {
+        send(kcpPeer, connectionID, packetType, data, false);
     }
 
-    private void send(KCPPeer kcpPeer, int packetType, String data, boolean isRelay) throws IOException {
+    private void send(KCPPeer kcpPeer, int connectionID, RendezvousPacketType packetType, String data, boolean isRelay) throws IOException {
         ByteBuffer byteBuffer = null;
         int dataSize = 0;
         if(data != null) {
@@ -244,10 +244,10 @@ public class RendezvousClient extends Thread {
         try {
             coded_output.writeRawBytes(MessageHeader.MAGIC_PACKET);
             coded_output.writeInt32NoTag(dataSize); // data size
-            coded_output.writeInt32NoTag(packetType); // packet type
+            coded_output.writeInt32NoTag(packetType.toInt()); // packet type
             coded_output.writeInt32NoTag(messageType.toInt()); // message type
             coded_output.writeInt32NoTag(0); // crypt type
-            coded_output.writeInt32NoTag(kcpPeer.connectionID); // connectionID
+            coded_output.writeInt32NoTag(connectionID); // connectionID
             if(data != null) {
                 coded_output.writeRawBytes(byteBuffer);
             }
@@ -260,11 +260,11 @@ public class RendezvousClient extends Thread {
         kcpPeer.lock.unlock();
     }
 
-    private void send(KCPPeer kcpPeer, MessageLite message) throws IOException {
-        send(kcpPeer, message, false);
+    private void send(KCPPeer kcpPeer, int connectionID, MessageLite message) throws IOException {
+        send(kcpPeer, connectionID, message, false);
     }
 
-    private void send(KCPPeer kcpPeer, MessageLite message, boolean isRelay) throws IOException {
+    private void send(KCPPeer kcpPeer, int connectionID, MessageLite message, boolean isRelay) throws IOException {
         int dataSize = message.getSerializedSize();
         byte []serialized = new byte[MessageHeader.MAGIC_PACKET.length + dataSize + MessageHeader.MAX_PACKET_HEADER_SIZE];
         CodedOutputStream coded_output = CodedOutputStream.newInstance(serialized, 0, serialized.length);
@@ -276,7 +276,7 @@ public class RendezvousClient extends Thread {
             coded_output.writeInt32NoTag(Registry.GetPacketType(message)); // packet type
             coded_output.writeInt32NoTag(messageType.toInt()); // message type
             coded_output.writeInt32NoTag(0); // crypt type
-            coded_output.writeInt32NoTag(kcpPeer.connectionID); // connection id
+            coded_output.writeInt32NoTag(connectionID); // connection id
             message.writeTo(coded_output);
         } catch (IOException e) {
             e.printStackTrace();
@@ -301,9 +301,6 @@ public class RendezvousClient extends Thread {
         messageHeader.mMessageType = coded_input.readRawVarint32();
         messageHeader.mCryptType = coded_input.readRawVarint32();
         messageHeader.mConnectionID = coded_input.readRawVarint32();
-
-
-        kcpPeer.connectionID = messageHeader.mConnectionID;
 
         MessageHeader.MessageType messageType = MessageHeader.MessageType.fromInt(messageHeader.mMessageType);
 
@@ -387,8 +384,7 @@ public class RendezvousClient extends Thread {
                     targetKCPPeer = new KCPPeer(datagramChannel, new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1])));
                     kcpPeerMap.put(targetKcpPeerKey, targetKCPPeer);
                 }
-                targetKCPPeer.connectionID = messageHeader.mConnectionID;
-                send(targetKCPPeer, RendezvousPacketType.DIRECT_CONNECTION_REQUEST.toInt(), null);
+                send(targetKCPPeer, messageHeader.mConnectionID, RendezvousPacketType.DIRECT_CONNECTION_REQUEST, null);
                 break;
             }
             case DIRECT_CONNECTION_REQUEST: // TP only
@@ -430,7 +426,6 @@ public class RendezvousClient extends Thread {
                     targetKCPPeer = new KCPPeer(datagramChannel, kcpPeer.address);
                     kcpPeerMap.put(targetKcpPeerKey, targetKCPPeer);
                 }
-                targetKCPPeer.connectionID = messageHeader.mConnectionID;
 
                 Log.d("scnet_android", "directly connected from " + kcpPeer.getKey());
                 if(rendezvousClientCallback != null) {
@@ -473,9 +468,8 @@ public class RendezvousClient extends Thread {
                     sourceKCPPeer = new KCPPeer(datagramChannel, new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1])));
                     kcpPeerMap.put(sourceKcpPeerKey, sourceKCPPeer);
                 }
-                sourceKCPPeer.connectionID = messageHeader.mConnectionID;
 
-                send(sourceKCPPeer, RendezvousPacketType.REVERSE_CONNECTION_REQUEST.toInt(), null);
+                send(sourceKCPPeer, messageHeader.mConnectionID, RendezvousPacketType.REVERSE_CONNECTION_REQUEST, null);
 
                 break;
             }
@@ -547,8 +541,7 @@ public class RendezvousClient extends Thread {
                     publicKCPPeer = new KCPPeer(datagramChannel, new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1])));
                     kcpPeerMap.put(publicKcpPeerKey, publicKCPPeer);
                 }
-                publicKCPPeer.connectionID = messageHeader.mConnectionID;
-                send(publicKCPPeer, RendezvousPacketType.UDP_HOLE_PUNCHING_REQUEST.toInt(), "1");
+                send(publicKCPPeer, messageHeader.mConnectionID, RendezvousPacketType.UDP_HOLE_PUNCHING_REQUEST, "1");
 
                 KCPPeer privateKCPPeer;
                 String privateKcpPeerKey = KCPPeer.getKey(bodyArray[2], bodyArray[3]);
@@ -559,8 +552,7 @@ public class RendezvousClient extends Thread {
                     privateKCPPeer = new KCPPeer(datagramChannel, new InetSocketAddress(bodyArray[2], Integer.parseInt(bodyArray[3])));
                     kcpPeerMap.put(privateKcpPeerKey, privateKCPPeer);
                 }
-                privateKCPPeer.connectionID = messageHeader.mConnectionID;
-                send(privateKCPPeer, RendezvousPacketType.UDP_HOLE_PUNCHING_REQUEST.toInt(), "0");
+                send(privateKCPPeer, messageHeader.mConnectionID, RendezvousPacketType.UDP_HOLE_PUNCHING_REQUEST, "0");
 
                 break;
             }
@@ -574,7 +566,7 @@ public class RendezvousClient extends Thread {
                     break;
                 }
 
-                send(kcpPeer, RendezvousPacketType.UDP_HOLE_PUNCHING_RESPONSE.toInt(), bodyArray[0]);
+                send(kcpPeer, messageHeader.mConnectionID, RendezvousPacketType.UDP_HOLE_PUNCHING_RESPONSE, bodyArray[0]);
 
                 break;
             }
@@ -645,9 +637,8 @@ public class RendezvousClient extends Thread {
                     relayKCPPeer = new KCPPeer(datagramChannel, new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1])));
                     kcpPeerMap.put(relayKcpPeerKey, relayKCPPeer);
                 }
-                relayKCPPeer.connectionID = messageHeader.mConnectionID;
 
-                send(relayKCPPeer, RendezvousPacketType.REGISTRATION_RELAY_PEER_REQUEST.toInt(), bodyArray[2]);
+                send(relayKCPPeer, messageHeader.mConnectionID, RendezvousPacketType.REGISTRATION_RELAY_PEER_REQUEST, bodyArray[2]);
                 break;
             }
             case CONNECTION_RELAY_SERVICE_SUCCESS:
@@ -671,7 +662,6 @@ public class RendezvousClient extends Thread {
                     relayKCPPeer = new KCPPeer(datagramChannel, new InetSocketAddress(bodyArray[0], Integer.parseInt(bodyArray[1])));
                     kcpPeerMap.put(relayKcpPeerKey, relayKCPPeer);
                 }
-                relayKCPPeer.connectionID = messageHeader.mConnectionID;
 
                 rendezvousSession.relayKCPPeer = relayKCPPeer;
                 Log.d("scnet_android", "connected by a relay from " + KCPPeer.getKey(bodyArray[0], bodyArray[1]));
@@ -709,10 +699,10 @@ public class RendezvousClient extends Thread {
 
     public void connect(String ip, int port) throws IOException {
         String data = ip + " " + port;
-        send(serverKCPPeer, RendezvousPacketType.CONNECTION_REQUEST.toInt(), data);
+        send(serverKCPPeer, 0, RendezvousPacketType.CONNECTION_REQUEST, data);
     }
 
-    public boolean send(int connectionID, int packetType, String data) throws IOException {
+    public boolean send(int connectionID, RendezvousPacketType packetType, String data) throws IOException {
 
         RendezvousSession rendezvousSession = rendezvousSessionArray.get(connectionID);
         if(rendezvousSession == null) {
@@ -725,10 +715,10 @@ public class RendezvousClient extends Thread {
         }
 
         if(rendezvousSession.privateKCPPeer == null && rendezvousSession.publicKCPPeer == null) {
-            send(kcpPeer, packetType, data, true);
+            send(kcpPeer, connectionID, packetType, data, true);
         }
         else {
-            send(kcpPeer, packetType, data);
+            send(kcpPeer, connectionID, packetType, data);
         }
         return true;
     }
@@ -745,10 +735,10 @@ public class RendezvousClient extends Thread {
         }
 
         if(rendezvousSession.privateKCPPeer == null && rendezvousSession.publicKCPPeer == null) {
-            send(kcpPeer, message, true);
+            send(kcpPeer, connectionID, message, true);
         }
         else {
-            send(kcpPeer, message);
+            send(kcpPeer, connectionID, message);
         }
         return true;
     }
@@ -757,7 +747,9 @@ public class RendezvousClient extends Thread {
         RendezvousSession rendezvousSession = rendezvousSessionArray.get(messageHeader.mConnectionID);
         if(rendezvousSession == null) {
             rendezvousSession = new RendezvousSession(messageHeader.mConnectionID);
-            rendezvousSessionArray.append(messageHeader.mConnectionID, rendezvousSession);
+            if(messageHeader.mConnectionID != 0) {
+                rendezvousSessionArray.append(messageHeader.mConnectionID, rendezvousSession);
+            }
         }
 
         return rendezvousSession;
