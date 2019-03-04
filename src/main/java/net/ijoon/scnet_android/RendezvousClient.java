@@ -175,6 +175,9 @@ public class RendezvousClient extends Thread {
                             if(relayKcpPeer.lastPing + timeout < current) {
                                 Log.i("scnet_android", "relay peer removed, " + relayKcpPeer.lastPing);
                                 rendezvousSession.relayKCPPeer = null;
+                                if(rendezvousClientCallback != null) {
+                                    rendezvousClientCallback.onConnectionRemoved(rendezvousSession, Connection.RELAY);
+                                }
                             }
                         }
 
@@ -183,6 +186,9 @@ public class RendezvousClient extends Thread {
                             if(publicKcpPeer.lastPing + timeout < current) {
                                 Log.i("scnet_android", "public peer removed, " + publicKcpPeer.lastPing);
                                 rendezvousSession.publicKCPPeer = null;
+                                if(rendezvousClientCallback != null) {
+                                    rendezvousClientCallback.onConnectionRemoved(rendezvousSession, Connection.PUBLIC);
+                                }
                             }
                         }
 
@@ -191,6 +197,9 @@ public class RendezvousClient extends Thread {
                             if(privateKcpPeer.lastPing + timeout < current) {
                                 Log.i("scnet_android", "private peer removed, " + privateKcpPeer.lastPing);
                                 rendezvousSession.privateKCPPeer = null;
+                                if(rendezvousClientCallback != null) {
+                                    rendezvousClientCallback.onConnectionRemoved(rendezvousSession, Connection.PRIVATE);
+                                }
                             }
                         }
 
