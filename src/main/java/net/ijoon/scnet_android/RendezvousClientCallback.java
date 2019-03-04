@@ -8,6 +8,7 @@ public interface RendezvousClientCallback {
     void onConnectFailed(int connectionID);
     void onConnectionUpdate(RendezvousSession rendezvousSession, Connection connection);
     void onConnectionRemoved(RendezvousSession rendezvousSession, Connection connection);
+    void onDisconnected(int connectionID);
 
     void onMessage(MessageHeader messageHeader, byte[] buffer);
 }

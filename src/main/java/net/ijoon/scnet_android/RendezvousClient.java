@@ -206,8 +206,10 @@ public class RendezvousClient extends Thread {
                         if(!rendezvousSession.isConnected()) {
                             int connectionID = rendezvousSession.connectionID;
                             rendezvousSessionArray.delete(connectionID);
+                            if(rendezvousClientCallback != null) {
+                                rendezvousClientCallback.onDisconnected(connectionID);
+                            }
 
-                            // callback to user (disconnected)
                             Log.i("scnet_android", "Disconnected, connectionID=" + connectionID);
                         }
                     }
