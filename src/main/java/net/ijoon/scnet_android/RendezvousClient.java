@@ -25,6 +25,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class RendezvousClient extends Thread {
@@ -38,7 +39,7 @@ public class RendezvousClient extends Thread {
     private ByteBuffer byteBuffer = ByteBuffer.allocate(65535);
 
     private SparseArray<RendezvousSession> rendezvousSessionArray = new SparseArray<>();
-    private HashMap<String, KCPPeer> kcpPeerMap = new HashMap<>();
+    private final ConcurrentHashMap<String, KCPPeer> kcpPeerMap = new ConcurrentHashMap<>();
 
     private KCPPeer serverKCPPeer;
 
