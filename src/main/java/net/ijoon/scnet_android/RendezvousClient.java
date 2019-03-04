@@ -47,6 +47,7 @@ public class RendezvousClient extends Thread {
     private Thread rawRecvThread;
     private Thread recvThread;
     private boolean isRunning;
+    private boolean isCallConnCallback;
 
     public final static int TYPE_INET4ADDRESS = 1;
     public final static int TYPE_INET6ADDRESS = 2;
@@ -281,6 +282,7 @@ public class RendezvousClient extends Thread {
         recvThread.start();
 
         isRunning = true;
+        isCallConnCallback = false;
     }
 
 
@@ -440,6 +442,13 @@ public class RendezvousClient extends Thread {
                 String myPublicIP = bodyArray[0];
                 String myPublicPort = bodyArray[1];
                 Log.i("scnet_android", "[REGISTRATION_RENDEZVOUS_CLIENT_SUCCESS] MyPublicAddress=" + KCPPeer.getKey(myPublicIP, myPublicPort));
+
+                if(!isCallConnCallback) {
+                    isCallConnCallback = true;
+                    if(rendezvousClientCallback != null) {
+                        rendezvousClientCallback.onConnectedToRendezvousServer(myPublicIP, myPublicPort);
+                    }
+                }
                 break;
             }
             case CONNECTION_FAILED:
