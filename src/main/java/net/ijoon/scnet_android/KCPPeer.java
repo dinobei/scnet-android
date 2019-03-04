@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -14,10 +15,11 @@ public class KCPPeer {
     KCP kcp;
     long next;
     ReentrantLock lock;
+    long lastPing;
 
     KCPPeer(final DatagramChannel datagramChannel, InetSocketAddress inetSocketAddress) {
         address = inetSocketAddress;
-        next = new Date().getTime();
+        next = Calendar.getInstance().getTimeInMillis();
         lock = new ReentrantLock();
         kcp = new KCP(0x11223344) {
             @Override
@@ -30,7 +32,9 @@ public class KCPPeer {
             }
         };
         kcp.WndSize(128, 128);
-        kcp.NoDelay(0, 10, 0, 0);
+        kcp.NoDelay(1, 20, 2, 1);
+
+        lastPing = Calendar.getInstance().getTimeInMillis();
     }
 
     String getKey() {

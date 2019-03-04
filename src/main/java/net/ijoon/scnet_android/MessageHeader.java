@@ -6,6 +6,7 @@ package net.ijoon.scnet_android;
 
 public final class MessageHeader {
     public final static byte[] MAGIC_PACKET = "IJ".getBytes();
+    final static int MAX_RECV_SIZE = 655350;
 
     public MessageHeader() {}
 
