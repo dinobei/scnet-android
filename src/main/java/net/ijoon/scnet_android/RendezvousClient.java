@@ -16,12 +16,16 @@ import java.net.NetworkInterface;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.charset.Charset;
+import java.sql.Time;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class RendezvousClient extends Thread {
 
@@ -102,24 +106,101 @@ public class RendezvousClient extends Thread {
 
         serverKCPPeer = getKcpPeer(new InetSocketAddress(rendezvousServerIP, rendezvousServerPort));
 
+        final long timeout = 60 * 1000;
+        final long pingInterval = 30 * 1000;
+        final long loopInterval = 5 * 1000;
         // register thread
         registerThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 String localAddress = getLocalIpAddress(TYPE_INET4ADDRESS);
                 int localPort = datagramChannel.socket().getLocalPort();
+                String data = localAddress + " " + localPort;
 
+                try {
+                    send(serverKCPPeer, 0, RendezvousPacketType.REGISTRATION_RENDEZVOUS_CLIENT_REQUEST, data);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                long lastRegistrationTime = Calendar.getInstance().getTimeInMillis();
+
+                ArrayList<String> willDeleteKcpPeer = new ArrayList<>();
                 while(!isInterrupted()) {
                     try {
-                        send(serverKCPPeer, 0, RendezvousPacketType.REGISTRATION_RENDEZVOUS_CLIENT_REQUEST, localAddress + " " + localPort);
-                        Thread.sleep(30*1000);
-
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                        Thread.sleep(loopInterval);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                         break;
                     }
+
+                    long current = Calendar.getInstance().getTimeInMillis();
+
+                    try {
+                        if(lastRegistrationTime + pingInterval < current) {
+                            lastRegistrationTime = current;
+                            send(serverKCPPeer, 0, RendezvousPacketType.REGISTRATION_RENDEZVOUS_CLIENT_REQUEST, data);
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    willDeleteKcpPeer.clear();
+                    synchronized (kcpPeerMap) {
+                        for (KCPPeer kcpPeer : kcpPeerMap.values()) {
+                            if (kcpPeer.lastPing + timeout < current) {
+                                willDeleteKcpPeer.add(kcpPeer.getKey());
+                            } else if (kcpPeer.lastPing + pingInterval < current) {
+                                try {
+                                    send(kcpPeer, 0, RendezvousPacketType.PING_REQUEST, null);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+
+                        for(int i = 0 ; i < willDeleteKcpPeer.size() ; i++) {
+                            Log.i("scnet_android", "removed kcpPeer: " + willDeleteKcpPeer.get(i));
+                            kcpPeerMap.remove(willDeleteKcpPeer.get(i));
+                        }
+                    }
+
+                    for(int i = 0 ; i < rendezvousSessionArray.size() ; i++) {
+                        RendezvousSession rendezvousSession = rendezvousSessionArray.valueAt(i);
+                        if(rendezvousSession == null) continue;
+                        if(rendezvousSession.relayKCPPeer != null) {
+                            KCPPeer relayKcpPeer = rendezvousSession.relayKCPPeer;
+                            if(relayKcpPeer.lastPing + timeout < current) {
+                                Log.i("scnet_android", "relay peer removed, " + relayKcpPeer.lastPing);
+                                rendezvousSession.relayKCPPeer = null;
+                            }
+                        }
+
+                        if(rendezvousSession.publicKCPPeer != null) {
+                            KCPPeer publicKcpPeer = rendezvousSession.publicKCPPeer;
+                            if(publicKcpPeer.lastPing + timeout < current) {
+                                Log.i("scnet_android", "public peer removed, " + publicKcpPeer.lastPing);
+                                rendezvousSession.publicKCPPeer = null;
+                            }
+                        }
+
+                        if(rendezvousSession.privateKCPPeer != null) {
+                            KCPPeer privateKcpPeer = rendezvousSession.privateKCPPeer;
+                            if(privateKcpPeer.lastPing + timeout < current) {
+                                Log.i("scnet_android", "private peer removed, " + privateKcpPeer.lastPing);
+                                rendezvousSession.privateKCPPeer = null;
+                            }
+                        }
+
+                        if(!rendezvousSession.isConnected()) {
+                            int connectionID = rendezvousSession.connectionID;
+                            rendezvousSessionArray.delete(connectionID);
+
+                            // callback to user (disconnected)
+                            Log.i("scnet_android", "Disconnected, connectionID=" + connectionID);
+                        }
+                    }
+
                 }
 
             }
@@ -138,11 +219,12 @@ public class RendezvousClient extends Thread {
 
                         byte[] buffer = byteBuffer.array();
 
-                        KCPPeer kcpPeer = getKcpPeer(remoteAddress);
-
-                        kcpPeer.lock.lock();
-                        kcpPeer.kcp.Input(buffer);
-                        kcpPeer.lock.unlock();
+                        synchronized (kcpPeerMap) {
+                            KCPPeer kcpPeer = getKcpPeer(remoteAddress);
+                            kcpPeer.lock.lock();
+                            kcpPeer.kcp.Input(buffer);
+                            kcpPeer.lock.unlock();
+                        }
                     } catch (IOException e) {
                         e.printStackTrace();
                         break;
@@ -157,31 +239,36 @@ public class RendezvousClient extends Thread {
         recvThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                byte[] buffer = new byte[100000];
+                byte[] buffer = new byte[MessageHeader.MAX_RECV_SIZE];
                 while(!isInterrupted()) {
-                    HashMap<String, KCPPeer> copiedMap = new HashMap<>(kcpPeerMap);
-                    for(KCPPeer kcpPeer: copiedMap.values()) {
-                        kcpPeer.lock.lock();
-                        int size = kcpPeer.kcp.Recv(buffer);
-                        if(size > 0) {
-                            // Callback
-                            try {
-                                callback(kcpPeer, buffer, size);
-                            } catch (IOException e) {
-                                e.printStackTrace();
+                    long current = Calendar.getInstance().getTimeInMillis();
+                    long minInterval = 10;
+                    synchronized (kcpPeerMap) {
+                        for(KCPPeer kcpPeer: kcpPeerMap.values()) {
+                            kcpPeer.lock.lock();
+
+                            int size = kcpPeer.kcp.Recv(buffer);
+                            if(kcpPeer.next < current) {
+                                kcpPeer.kcp.Update(current);
+                                kcpPeer.next = kcpPeer.kcp.Check(current);
+
+                                if( (kcpPeer.next - current) < minInterval ) minInterval = (kcpPeer.next - current);
+                            }
+
+                            kcpPeer.lock.unlock();
+
+                            if(size > 0) {
+                                try {
+                                    callback(kcpPeer, buffer, size);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
                             }
                         }
-
-                        long current = new Date().getTime();
-                        if(kcpPeer.next < current) {
-                            kcpPeer.kcp.Update(current);
-                            kcpPeer.next = kcpPeer.kcp.Check(current);
-                        }
-
-                        kcpPeer.lock.unlock();
                     }
+
                     try {
-                        Thread.sleep(10);
+                        Thread.sleep(minInterval);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                         break;
@@ -286,6 +373,7 @@ public class RendezvousClient extends Thread {
         kcpPeer.lock.unlock();
     }
 
+    private MessageHeader messageHeader = new MessageHeader();
     private void callback(KCPPeer kcpPeer, byte[] buffer, int size) throws IOException {
         if(!MessageHeader.isValidMagicPacket(buffer)) {
             throw new IOException("Invalid magic packet");
@@ -293,13 +381,14 @@ public class RendezvousClient extends Thread {
 
         CodedInputStream coded_input = CodedInputStream.newInstance(buffer);
 
-        MessageHeader messageHeader = new MessageHeader();
         coded_input.readRawBytes(MessageHeader.MAGIC_PACKET.length);
         messageHeader.mDataSize = coded_input.readRawVarint32();
         messageHeader.mPacketType = coded_input.readRawVarint32();
         messageHeader.mMessageType = coded_input.readRawVarint32();
         messageHeader.mCryptType = coded_input.readRawVarint32();
         messageHeader.mConnectionID = coded_input.readRawVarint32();
+
+        kcpPeer.lastPing = Calendar.getInstance().getTimeInMillis();
 
         MessageHeader.MessageType messageType = MessageHeader.MessageType.fromInt(messageHeader.mMessageType);
 
@@ -541,18 +630,19 @@ public class RendezvousClient extends Thread {
                     break;
                 }
 
+                Log.d("logdinobei", "Integer.parseInt(bodyArray[0]): " + bodyArray[0]);
                 boolean isPublic = Integer.parseInt(bodyArray[0]) == 1;
                 RendezvousSession rendezvousSession = getRendezvousSessionSafety(messageHeader);
                 boolean isConnected = rendezvousSession.isConnected();
                 Connection connection;
                 if(isPublic) {
-                    // public connection (common connection)
+                    // udp hole punching
                     rendezvousSession.publicKCPPeer = kcpPeer;
                     connection = Connection.UDP_HOLE_PUNCHING;
-                    Log.d("scnet_android", "udp hole punching success from " + kcpPeer.getKey());
+                    Log.d("scnet_android", "connected by udp hole punching from " + kcpPeer.getKey());
                 }
                 else {
-                    // private connection (equal net, or hole punching)
+                    // equal NAT
                     rendezvousSession.privateKCPPeer = kcpPeer;
                     connection = Connection.EQUAL_NAT;
                     Log.d("scnet_android", "connected under equal NAT from " + kcpPeer.getKey());
@@ -630,6 +720,17 @@ public class RendezvousClient extends Thread {
                 Log.d("scnet_android", "received REGISTRATION_RELAY_PEER_FAILED");
                 break;
             }
+            case PING_REQUEST:
+            {
+                Log.d("scnet_android", "received PING_REQUEST from " + kcpPeer.getKey());
+                send(kcpPeer, 0, RendezvousPacketType.PING_RESPONSE, null);
+                break;
+            }
+            case PING_RESPONSE:
+            {
+                Log.d("scnet_android", "received PING_RESPONSE");
+                break;
+            }
             default:
             {
                 Log.e("scnet_android", "Undefined message received, " + rendezvousPacketType);
@@ -673,21 +774,27 @@ public class RendezvousClient extends Thread {
             return false;
         }
 
-        KCPPeer kcpPeer = rendezvousSession.privateKCPPeer != null ? rendezvousSession.privateKCPPeer : (rendezvousSession.publicKCPPeer != null ? rendezvousSession.publicKCPPeer : rendezvousSession.relayKCPPeer);
-        if(kcpPeer == null) {
-            return false;
+        KCPPeer kcpPeer;
+        if(rendezvousSession.privateKCPPeer != null) {
+            kcpPeer = rendezvousSession.privateKCPPeer;
+            send(kcpPeer, connectionID, message);
         }
-
-        if(rendezvousSession.privateKCPPeer == null && rendezvousSession.publicKCPPeer == null) {
+        else if(rendezvousSession.publicKCPPeer != null) {
+            kcpPeer = rendezvousSession.publicKCPPeer;
+            send(kcpPeer, connectionID, message);
+        }
+        else if(rendezvousSession.relayKCPPeer != null) {
+            kcpPeer = rendezvousSession.relayKCPPeer;
             send(kcpPeer, connectionID, message, true);
         }
         else {
-            send(kcpPeer, connectionID, message);
+            return false;
         }
+
         return true;
     }
 
-    RendezvousSession getRendezvousSessionSafety(MessageHeader messageHeader) {
+    private RendezvousSession getRendezvousSessionSafety(MessageHeader messageHeader) {
         RendezvousSession rendezvousSession = rendezvousSessionArray.get(messageHeader.mConnectionID);
         if(rendezvousSession == null) {
             rendezvousSession = new RendezvousSession(messageHeader.mConnectionID);
