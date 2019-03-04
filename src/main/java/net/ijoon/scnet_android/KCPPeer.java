@@ -30,7 +30,7 @@ public class KCPPeer {
             }
         };
         kcp.WndSize(128, 128);
-        kcp.NoDelay(0, 10, 0, 0);
+        kcp.NoDelay(1, 20, 2, 1);
     }
 
     String getKey() {
