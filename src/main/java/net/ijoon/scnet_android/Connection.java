@@ -6,7 +6,9 @@ public enum Connection {
     REVERSE_CONNECTION(2),
     EQUAL_NAT(3),
     UDP_HOLE_PUNCHING(4),
-    RELAY(5);
+    RELAY(5),
+    PUBLIC(6),
+    PRIVATE(7);
 
     private final int code;
 
