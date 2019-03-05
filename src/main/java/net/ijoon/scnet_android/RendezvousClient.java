@@ -117,7 +117,7 @@ public class RendezvousClient extends Thread {
             public void run() {
                 String localAddress = getLocalIpAddress(TYPE_INET4ADDRESS);
                 int localPort = datagramChannel.socket().getLocalPort();
-                String data = localAddress + " " + localPort;
+                String data = localAddress + " " + localPort + " android";
 
                 try {
                     send(serverKCPPeer, 0, RendezvousPacketType.REGISTRATION_RENDEZVOUS_CLIENT_REQUEST, data);
