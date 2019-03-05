@@ -119,11 +119,7 @@ public class RendezvousClient extends Thread {
                 int localPort = datagramChannel.socket().getLocalPort();
                 String data = localAddress + " " + localPort + " android";
 
-                try {
-                    send(serverKCPPeer, 0, RendezvousPacketType.REGISTRATION_RENDEZVOUS_CLIENT_REQUEST, data);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                send(serverKCPPeer, 0, RendezvousPacketType.REGISTRATION_RENDEZVOUS_CLIENT_REQUEST, data);
 
                 long lastRegistrationTime = Calendar.getInstance().getTimeInMillis();
 
@@ -138,13 +134,9 @@ public class RendezvousClient extends Thread {
 
                     long current = Calendar.getInstance().getTimeInMillis();
 
-                    try {
-                        if(lastRegistrationTime + pingInterval < current) {
-                            lastRegistrationTime = current;
-                            send(serverKCPPeer, 0, RendezvousPacketType.REGISTRATION_RENDEZVOUS_CLIENT_REQUEST, data);
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    if(lastRegistrationTime + pingInterval < current) {
+                        lastRegistrationTime = current;
+                        send(serverKCPPeer, 0, RendezvousPacketType.REGISTRATION_RENDEZVOUS_CLIENT_REQUEST, data);
                     }
 
                     willDeleteKcpPeer.clear();
@@ -153,11 +145,7 @@ public class RendezvousClient extends Thread {
                             if (kcpPeer.lastPing + timeout < current) {
                                 willDeleteKcpPeer.add(kcpPeer.getKey());
                             } else if (kcpPeer.lastPing + pingInterval < current) {
-                                try {
-                                    send(kcpPeer, 0, RendezvousPacketType.PING_REQUEST, null);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
+                                send(kcpPeer, 0, RendezvousPacketType.PING_REQUEST, null);
                             }
                         }
 
@@ -325,11 +313,15 @@ public class RendezvousClient extends Thread {
         return isRunning;
     }
 
-    private void send(KCPPeer kcpPeer, int connectionID, RendezvousPacketType packetType, String data) throws IOException {
-        send(kcpPeer, connectionID, packetType, data, false);
+    private void send(KCPPeer kcpPeer, int connectionID, RendezvousPacketType packetType, String data) {
+        _send(kcpPeer, connectionID, packetType.toInt(), data, false);
     }
 
-    private void send(KCPPeer kcpPeer, int connectionID, RendezvousPacketType packetType, String data, boolean isRelay) throws IOException {
+    private void sendRelay(KCPPeer kcpPeer, int connectionID, RendezvousPacketType packetType, String data)  {
+        _send(kcpPeer, connectionID, packetType.toInt(), data, true);
+    }
+
+    private void _send(KCPPeer kcpPeer, int connectionID, int packetType, String data, boolean isRelay) {
         ByteBuffer byteBuffer = null;
         int dataSize = 0;
         if(data != null) {
@@ -344,7 +336,7 @@ public class RendezvousClient extends Thread {
         try {
             coded_output.writeRawBytes(MessageHeader.MAGIC_PACKET);
             coded_output.writeInt32NoTag(dataSize); // data size
-            coded_output.writeInt32NoTag(packetType.toInt()); // packet type
+            coded_output.writeInt32NoTag(packetType); // packet type
             coded_output.writeInt32NoTag(messageType.toInt()); // message type
             coded_output.writeInt32NoTag(0); // crypt type
             coded_output.writeInt32NoTag(connectionID); // connectionID
@@ -360,11 +352,15 @@ public class RendezvousClient extends Thread {
         kcpPeer.lock.unlock();
     }
 
-    private void send(KCPPeer kcpPeer, int connectionID, MessageLite message) throws IOException {
-        send(kcpPeer, connectionID, message, false);
+    private void send(KCPPeer kcpPeer, int connectionID, MessageLite message) {
+        _send(kcpPeer, connectionID, message, false);
     }
 
-    private void send(KCPPeer kcpPeer, int connectionID, MessageLite message, boolean isRelay) throws IOException {
+    private void sendRelay(KCPPeer kcpPeer, int connectionID, MessageLite message) {
+        _send(kcpPeer, connectionID, message, true);
+    }
+
+    private void _send(KCPPeer kcpPeer, int connectionID, MessageLite message, boolean isRelay) {
         int dataSize = message.getSerializedSize();
         byte []serialized = new byte[MessageHeader.MAGIC_PACKET.length + dataSize + MessageHeader.MAX_PACKET_HEADER_SIZE];
         CodedOutputStream coded_output = CodedOutputStream.newInstance(serialized, 0, serialized.length);
@@ -509,7 +505,7 @@ public class RendezvousClient extends Thread {
                     }
                 }
 
-                send(kcpPeer, RendezvousPacketType.DIRECT_CONNECTION_RESPONSE.toInt(), null);
+                send(kcpPeer, messageHeader.mConnectionID, RendezvousPacketType.DIRECT_CONNECTION_RESPONSE, null);
                 break;
             }
             case DIRECT_CONNECTION_RESPONSE: // SP only
@@ -562,7 +558,7 @@ public class RendezvousClient extends Thread {
             {
                 Log.d("scnet_android", "received REVERSE_CONNECTION_REQUEST");
 
-                send(kcpPeer, RendezvousPacketType.REVERSE_CONNECTION_RESPONSE.toInt(), null);
+                send(kcpPeer, messageHeader.mConnectionID, RendezvousPacketType.REVERSE_CONNECTION_RESPONSE, null);
 
                 RendezvousSession rendezvousSession = getRendezvousSessionSafety(messageHeader);
                 boolean isConnected = rendezvousSession.isConnected();
@@ -768,7 +764,24 @@ public class RendezvousClient extends Thread {
         send(serverKCPPeer, 0, RendezvousPacketType.CONNECTION_REQUEST, data);
     }
 
-    public boolean send(int connectionID, RendezvousPacketType packetType, String data) throws IOException {
+    public boolean send(int packetType, String data) {
+        if(RendezvousPacketType.fromInt(packetType) != RendezvousPacketType.NONE) {
+            Log.d("scnet_android", "User application can't send rendezvous message.");
+            return false;
+        }
+
+        KCPPeer kcpPeer = getKcpPeer(new InetSocketAddress(rendezvousServerIP, rendezvousServerPort));
+        _send(kcpPeer, 0, packetType, data, false);
+        return true;
+    }
+
+    public boolean send(MessageLite message) {
+        KCPPeer kcpPeer = getKcpPeer(new InetSocketAddress(rendezvousServerIP, rendezvousServerPort));
+        _send(kcpPeer, 0, message, false);
+        return true;
+    }
+
+    public boolean send(int connectionID, RendezvousPacketType packetType, String data) {
 
         RendezvousSession rendezvousSession = rendezvousSessionArray.get(connectionID);
         if(rendezvousSession == null) {
@@ -781,7 +794,7 @@ public class RendezvousClient extends Thread {
         }
 
         if(rendezvousSession.privateKCPPeer == null && rendezvousSession.publicKCPPeer == null) {
-            send(kcpPeer, connectionID, packetType, data, true);
+            sendRelay(kcpPeer, connectionID, packetType, data);
         }
         else {
             send(kcpPeer, connectionID, packetType, data);
@@ -789,7 +802,7 @@ public class RendezvousClient extends Thread {
         return true;
     }
 
-    public boolean send(int connectionID, MessageLite message) throws IOException {
+    public boolean send(int connectionID, MessageLite message) {
         RendezvousSession rendezvousSession = rendezvousSessionArray.get(connectionID);
         if(rendezvousSession == null) {
             return false;
@@ -798,15 +811,15 @@ public class RendezvousClient extends Thread {
         KCPPeer kcpPeer;
         if(rendezvousSession.privateKCPPeer != null) {
             kcpPeer = rendezvousSession.privateKCPPeer;
-            send(kcpPeer, connectionID, message);
+            _send(kcpPeer, connectionID, message, false);
         }
         else if(rendezvousSession.publicKCPPeer != null) {
             kcpPeer = rendezvousSession.publicKCPPeer;
-            send(kcpPeer, connectionID, message);
+            _send(kcpPeer, connectionID, message, false);
         }
         else if(rendezvousSession.relayKCPPeer != null) {
             kcpPeer = rendezvousSession.relayKCPPeer;
-            send(kcpPeer, connectionID, message, true);
+            _send(kcpPeer, connectionID, message, true);
         }
         else {
             return false;
