@@ -5,6 +5,8 @@ public interface RendezvousClientCallback {
 
     void onConnecting(int connectionID);
     void onConnected(RendezvousSession rendezvousSession, Connection connection);
+    void onConnectionIDCreated(int connectionID, String ip, int port);
+    void onTargetInvalid(String ip, int port);
     void onConnectFailed(int connectionID);
     void onConnectionUpdate(RendezvousSession rendezvousSession, Connection connection);
     void onConnectionRemoved(RendezvousSession rendezvousSession, Connection connection);

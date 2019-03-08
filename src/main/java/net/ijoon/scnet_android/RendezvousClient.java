@@ -458,12 +458,33 @@ public class RendezvousClient extends Thread {
                 }
                 break;
             }
-            case CONNECTION_FAILED:
+            case CONNECTION_TARGET_INVALID:
             {
-                Log.d("scnet_android", "received CONNECTION_FAILED");
-                if(rendezvousClientCallback != null) {
-                    rendezvousClientCallback.onConnectFailed(messageHeader.mConnectionID);
+                Log.d("scnet_android", "received CONNECTION_TARGET_INVALID");
+                String[] bodyArray = body.split(" ");
+                if(bodyArray.length != 2) {
+                    Log.e("scnet_android", "[CONNECTION_TARGET_INVALID] invalid parameters");
+                    break;
                 }
+
+                if(rendezvousClientCallback != null) {
+                    rendezvousClientCallback.onTargetInvalid(bodyArray[0], Integer.parseInt(bodyArray[1]));
+                }
+                break;
+            }
+            case CONNECTION_ID_CREATED:
+            {
+                String[] bodyArray = body.split(" ");
+                if(bodyArray.length != 2) {
+                    Log.e("scnet_android", "[CONNECTION_ID_CREATED] invalid parameters");
+                    break;
+                }
+
+                if(rendezvousClientCallback != null) {
+                    rendezvousClientCallback.onConnectionIDCreated(messageHeader.mConnectionID, bodyArray[0], Integer.parseInt(bodyArray[1]));
+                }
+
+                send(kcpPeer, messageHeader.mConnectionID, RendezvousPacketType.CONNECTION_ID_RECEIVED, bodyArray[0]);
                 break;
             }
             case DIRECT_CONNECTION_AVAILABLE: // SP only
