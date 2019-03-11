@@ -481,7 +481,8 @@ public class RendezvousClient extends Thread {
                 }
 
                 if(rendezvousClientCallback != null) {
-                    rendezvousClientCallback.onConnectionIDCreated(messageHeader.mConnectionID, bodyArray[0], Integer.parseInt(bodyArray[1]));
+                    RendezvousSession rendezvousSession = getRendezvousSessionSafety(messageHeader);
+                    rendezvousClientCallback.onConnectionIDCreated(rendezvousSession, bodyArray[0], Integer.parseInt(bodyArray[1]));
                 }
 
                 send(kcpPeer, messageHeader.mConnectionID, RendezvousPacketType.CONNECTION_ID_RECEIVED, bodyArray[0]);
