@@ -60,14 +60,11 @@ public class RendezvousClient extends Thread {
                     InetAddress inetAddress = ( InetAddress ) enumIpAddr.nextElement();
                     if (!inetAddress.isLoopbackAddress()) {
                         switch (type) {
-                            case TYPE_INET6ADDRESS:
-                                if (inetAddress instanceof Inet6Address) {
-                                    return inetAddress.getHostAddress();
-                                }
-                                break;
                             case TYPE_INET4ADDRESS:
                                 if (inetAddress instanceof Inet4Address) {
-                                    return inetAddress.getHostAddress();
+                                    if(!inetAddress.getHostAddress().equals("192.0.0.4")) {
+                                        return inetAddress.getHostAddress();
+                                    }
                                 }
                                 break;
                         }
@@ -75,8 +72,9 @@ public class RendezvousClient extends Thread {
                 }
             }
         } catch (Exception e) {
+            e.printStackTrace();
         }
-        return null;
+        return "0.0.0.0";
     }
 
     public RendezvousClient(String ip, int port) {
