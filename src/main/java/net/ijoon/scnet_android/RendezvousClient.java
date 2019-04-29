@@ -779,7 +779,7 @@ public class RendezvousClient extends Thread {
 
     }
 
-    public void connect(String ip, int port) throws IOException {
+    public void connect(String ip, int port) {
         String data = ip + " " + port;
         send(serverKCPPeer, 0, RendezvousPacketType.CONNECTION_REQUEST, data);
     }
