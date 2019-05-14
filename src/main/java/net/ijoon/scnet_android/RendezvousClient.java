@@ -1,5 +1,7 @@
 package net.ijoon.scnet_android;
 
+import android.content.Context;
+import android.provider.Settings;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -9,27 +11,21 @@ import com.google.protobuf.MessageLite;
 
 import java.io.IOException;
 import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.charset.Charset;
-import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class RendezvousClient extends Thread {
 
+    private Context context;
     private DatagramChannel datagramChannel;
     private String rendezvousServerIP;
     private int rendezvousServerPort;
@@ -77,9 +73,10 @@ public class RendezvousClient extends Thread {
         return "0.0.0.0";
     }
 
-    public RendezvousClient(String ip, int port) {
+    public RendezvousClient(Context ctx, String ip, int port) {
         rendezvousServerIP = ip;
         rendezvousServerPort = port;
+        context = ctx;
     }
 
     private KCPPeer getKcpPeer(InetSocketAddress address) {
@@ -115,7 +112,9 @@ public class RendezvousClient extends Thread {
             public void run() {
                 String localAddress = getLocalIpAddress(TYPE_INET4ADDRESS);
                 int localPort = datagramChannel.socket().getLocalPort();
-                String data = localAddress + " " + localPort + " android";
+
+                String android_id = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
+                String data = localAddress + " " + localPort + " " + android_id;
 
                 send(serverKCPPeer, 0, RendezvousPacketType.REGISTRATION_RENDEZVOUS_CLIENT_REQUEST, data);
 
