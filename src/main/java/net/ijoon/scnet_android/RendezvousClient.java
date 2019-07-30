@@ -746,16 +746,6 @@ public class RendezvousClient extends Thread {
                 Log.d("scnet_android", "received CONNECTION_RELAY_SERVICE_FAILED");
                 break;
             }
-            case REGISTRATION_RELAY_PEER_SUCCESS:
-            {
-                Log.d("scnet_android", "received REGISTRATION_RELAY_PEER_SUCCESS");
-                break;
-            }
-            case REGISTRATION_RELAY_PEER_FAILED:
-            {
-                Log.d("scnet_android", "received REGISTRATION_RELAY_PEER_FAILED");
-                break;
-            }
             case PING_REQUEST:
             {
                 Log.d("scnet_android", "received PING_REQUEST from " + kcpPeer.getKey());
