@@ -1,17 +1,33 @@
 package net.ijoon.scnet_android;
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
+import java.util.ArrayList;
+
 public class SCNetAppCompatActivity extends AppCompatActivity implements SCNetClientCallback,RendezvousClientCallback {
     GlobalApplication mGlobalApplication;
+    public static ArrayList<Activity> activityList = new ArrayList<Activity>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        activityList.add(this);
         mGlobalApplication = (GlobalApplication)getApplicationContext();
         mGlobalApplication.mCallback = this;
         mGlobalApplication.mRendezvousClientCallback = this;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        activityList.remove(this);
+    }
+
+    public void activityFinish(){
+        for(int i = 0; i < activityList.size(); i++)
+            activityList.get(i).finish();
     }
 
     @Override
