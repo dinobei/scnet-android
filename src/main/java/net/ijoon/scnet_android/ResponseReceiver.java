@@ -53,7 +53,12 @@ class ResponseReceiver extends Thread {
         {
             try {
 
-                Iterator<SelectionKey> iter = mStream.select(10 * 1000);
+                Iterator<SelectionKey> iter = mStream.select(5 * 1000);
+
+                if(!iter.hasNext()) {
+                    if(!mIsMainServerSession) mServerManagerCallback.onTimedOut(mSessionIndex);
+                }
+
                 while(iter.hasNext()) {
                     SelectionKey key = iter.next();
                     iter.remove();

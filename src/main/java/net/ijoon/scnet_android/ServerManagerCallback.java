@@ -10,5 +10,7 @@ public interface ServerManagerCallback {
     void onAttachFailed(int sessionIndex);
     void onDetach(int sessionIndex);
 
+    void onTimedOut(int sessionIndex);
+
     void onResponse(int sessionIndex, MessageHeader messageHeader, byte[] bodyBuf);
 }
