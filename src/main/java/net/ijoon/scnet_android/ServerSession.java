@@ -40,7 +40,7 @@ public class ServerSession extends Thread {
         mSessionIndex = sessionIndex;
     }
 
-    boolean request(MessageLite message) {
+    public boolean request(MessageLite message) {
         boolean result = true;
 
         try {
