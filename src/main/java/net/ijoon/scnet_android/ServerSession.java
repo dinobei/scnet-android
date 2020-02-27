@@ -21,7 +21,7 @@ public class ServerSession extends Thread {
 
 //    private long mLastPing;
 
-    ServerSession(String ip, int port, int socketTimeoutMilis, SCNetClientCallback callback) {
+    public ServerSession(String ip, int port, int socketTimeoutMilis, SCNetClientCallback callback) {
         mIp = ip;
         mPort = port;
         mSocketTimeoutMilis = socketTimeoutMilis;

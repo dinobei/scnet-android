@@ -10,5 +10,7 @@ public interface SCNetClientCallback {
     void onAttachFailed();
     void onDetach();
 
+    void onTimedOut();
+
     void onResponse(MessageHeader messageHeader, byte[] bodyBuf);
 }

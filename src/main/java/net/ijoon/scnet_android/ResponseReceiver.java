@@ -56,7 +56,8 @@ class ResponseReceiver extends Thread {
                 Iterator<SelectionKey> iter = mStream.select(5 * 1000);
 
                 if(!iter.hasNext()) {
-                    if(!mIsMainServerSession) mServerManagerCallback.onTimedOut(mSessionIndex);
+                    if(mIsMainServerSession) mMainServerCallback.onTimedOut();
+                    else mServerManagerCallback.onTimedOut(mSessionIndex);
                 }
 
                 while(iter.hasNext()) {
