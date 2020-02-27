@@ -1,7 +1,6 @@
 package net.ijoon.scnet_android;
 import android.util.Log;
 import com.google.protobuf.CodedInputStream;
-import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.util.Iterator;
@@ -20,13 +19,13 @@ class ResponseReceiver extends Thread {
     private Stream mStream;
     private RequestSender mRequestSender;
 
-    ResponseReceiver(@NotNull SCNetClientCallback callback) {
+    ResponseReceiver(SCNetClientCallback callback) {
         mMainServerCallback = callback;
 
         mIsMainServerSession = true;
     }
 
-    ResponseReceiver(int sessionIndex, @NotNull ServerManagerCallback callback) {
+    ResponseReceiver(int sessionIndex, ServerManagerCallback callback) {
         mServerManagerCallback = callback;
 
         mIsMainServerSession = false;
@@ -38,7 +37,7 @@ class ResponseReceiver extends Thread {
         throw new RuntimeException("Use requestSender.start(Stream, responseSender)");
     }
 
-    void start(@NotNull Stream stream, RequestSender requestSender) {
+    void start(Stream stream, RequestSender requestSender) {
         mStream = stream;
         mRequestSender = requestSender;
         super.start();

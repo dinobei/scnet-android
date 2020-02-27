@@ -1,8 +1,8 @@
 package net.ijoon.scnet_android;
 
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.support.v7.app.AppCompatActivity;
+
+import androidx.fragment.app.Fragment;
 
 public class SCNetFragment extends Fragment implements SCNetClientCallback,RendezvousClientCallback {
     GlobalApplication mGlobalApplication;

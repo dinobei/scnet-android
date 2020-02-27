@@ -1,13 +1,7 @@
 package net.ijoon.scnet_android;
 
 import android.app.Activity;
-import android.content.SharedPreferences;
-import android.content.res.Configuration;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
-
-import java.util.Locale;
 
 public class SCNetActivity extends Activity implements SCNetClientCallback, RendezvousClientCallback {
     GlobalApplication mGlobalApplication;

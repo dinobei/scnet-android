@@ -5,8 +5,6 @@ import android.util.Log;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.MessageLite;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -25,7 +23,7 @@ public class RequestSender extends Thread {
         throw new RuntimeException("Use requestSender.start(Stream, responseReceiver)");
     }
 
-    void start(@NotNull Stream stream, ResponseReceiver responseReceiver) {
+    void start(Stream stream, ResponseReceiver responseReceiver) {
         mStream = stream;
         mResponseReceiver = responseReceiver;
         super.start();

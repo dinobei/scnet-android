@@ -1,14 +1,6 @@
 package net.ijoon.scnet_android;
 
-import android.app.Activity;
 import android.app.Application;
-import android.os.Build;
-import android.os.Bundle;
-import android.support.annotation.RequiresApi;
-
-import com.google.protobuf.MessageLite;
-
-import java.util.Stack;
 
 /**
  * Created by pbj on 2017. 12. 15..
