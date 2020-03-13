@@ -36,6 +36,10 @@ public class SCNetFragment extends Fragment implements SCNetClientCallback,Rende
     }
 
     @Override
+    public void onTimedOut() {
+    }
+
+    @Override
     public void onResponse(MessageHeader messageHeader, byte[] bodyBuf) {
     }
 

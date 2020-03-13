@@ -56,6 +56,10 @@ public class SCNetAppCompatActivity extends AppCompatActivity implements SCNetCl
     }
 
     @Override
+    public void onTimedOut() {
+    }
+
+    @Override
     public void onResponse(MessageHeader messageHeader, byte[] bodyBuf) {
     }
 

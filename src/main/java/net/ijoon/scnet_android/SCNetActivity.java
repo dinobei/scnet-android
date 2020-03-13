@@ -39,6 +39,11 @@ public class SCNetActivity extends Activity implements SCNetClientCallback, Rend
     }
 
     @Override
+    public void onTimedOut() {
+
+    }
+
+    @Override
     public void onResponse(MessageHeader messageHeader, byte[] bodyBuf) {
     }
 

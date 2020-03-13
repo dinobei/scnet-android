@@ -37,6 +37,11 @@ public class GlobalApplication extends Application implements SCNetClientCallbac
     }
 
     @Override
+    public void onTimedOut() {
+
+    }
+
+    @Override
     public void onResponse(MessageHeader messageHeader, byte[] bodyBuf) {
         if(mCallback != null) mCallback.onResponse(messageHeader, bodyBuf);
     }
