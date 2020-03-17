@@ -64,12 +64,10 @@ public class Registry {
     }
 
     static ProtobufCallback GetProtobufCallback(int packetTypeInt) {
-        if(mProtobufCallbackSparseArray.size() == 0) throw new RuntimeException("You must regist protobuf messages");
         return mProtobufCallbackSparseArray.get(packetTypeInt);
     }
 
     static RawbyteCallback GetRawbyteCallback(int packetTypeInt) {
-        if(mRawbyteCallbackSparseArray.size() == 0) throw new RuntimeException("You must regist rawbyte packet before using it");
         return mRawbyteCallbackSparseArray.get(packetTypeInt);
     }
 }

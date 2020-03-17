@@ -38,6 +38,23 @@ public class ServerSession extends Thread {
         return result;
     }
 
+    public boolean request(int packetType, byte[] message) {
+        return request(packetType, message, message.length);
+    }
+
+    public boolean request(int packetType, byte[] message, int length) {
+        boolean result = true;
+
+        try {
+            mRequestSender.request(packetType, message, length);
+        }
+        catch (NullPointerException e) {
+            result = false;
+        }
+
+        return result;
+    }
+
     private Stream connect() {
         Stream stream = null;
         try {
