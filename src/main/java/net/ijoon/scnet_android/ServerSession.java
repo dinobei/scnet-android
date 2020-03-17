@@ -111,8 +111,12 @@ public class ServerSession extends Thread {
             }
 
             try {
+                Thread.sleep(1000);
+
                 stream.close();
             } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
