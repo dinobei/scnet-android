@@ -40,10 +40,6 @@ public class SCNetFragment extends Fragment implements SCNetClientCallback,Rende
     }
 
     @Override
-    public void onResponse(MessageHeader messageHeader, byte[] bodyBuf) {
-    }
-
-    @Override
     public void onConnectedToRendezvousServer(String myPublicIP, String myPublicPort) {
     }
 

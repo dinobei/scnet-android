@@ -60,10 +60,6 @@ public class SCNetAppCompatActivity extends AppCompatActivity implements SCNetCl
     }
 
     @Override
-    public void onResponse(MessageHeader messageHeader, byte[] bodyBuf) {
-    }
-
-    @Override
     public void onConnectedToRendezvousServer(String myPublicIP, String myPublicPort) {
     }
 

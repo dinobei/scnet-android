@@ -42,11 +42,6 @@ public class GlobalApplication extends Application implements SCNetClientCallbac
     }
 
     @Override
-    public void onResponse(MessageHeader messageHeader, byte[] bodyBuf) {
-        if(mCallback != null) mCallback.onResponse(messageHeader, bodyBuf);
-    }
-
-    @Override
     public void onConnectedToRendezvousServer(String myPublicIP, String myPublicPort) {
         if(mRendezvousClientCallback != null)
             mRendezvousClientCallback.onConnectedToRendezvousServer(myPublicIP, myPublicPort);

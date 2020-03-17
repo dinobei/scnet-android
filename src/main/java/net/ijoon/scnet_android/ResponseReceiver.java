@@ -1,6 +1,10 @@
 package net.ijoon.scnet_android;
 import android.util.Log;
 import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.MessageLite;
+
+import net.ijoon.scnet_android.MessageHeader.MessageType;
+
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.util.Iterator;
@@ -10,26 +14,13 @@ import java.util.Iterator;
  */
 
 class ResponseReceiver extends Thread {
-    private boolean mIsMainServerSession;
-    private int mSessionIndex;
-
-    private SCNetClientCallback mMainServerCallback;
-    private ServerManagerCallback mServerManagerCallback;
+    private SCNetClientCallback mClientCallback;
 
     private Stream mStream;
     private RequestSender mRequestSender;
 
     ResponseReceiver(SCNetClientCallback callback) {
-        mMainServerCallback = callback;
-
-        mIsMainServerSession = true;
-    }
-
-    ResponseReceiver(int sessionIndex, ServerManagerCallback callback) {
-        mServerManagerCallback = callback;
-
-        mIsMainServerSession = false;
-        mSessionIndex = sessionIndex;
+        mClientCallback = callback;
     }
 
     @Override
@@ -46,8 +37,7 @@ class ResponseReceiver extends Thread {
     @Override
     public void run() {
         Log.d("scnet_android", "ResponseReceiver Thread Start");
-        if(mIsMainServerSession) mMainServerCallback.onAttached();
-        else mServerManagerCallback.onAttached(mSessionIndex);
+        mClientCallback.onAttached();
 
         while(!isInterrupted())
         {
@@ -56,8 +46,7 @@ class ResponseReceiver extends Thread {
                 Iterator<SelectionKey> iter = mStream.select(5 * 1000);
 
                 if(!iter.hasNext()) {
-                    if(mIsMainServerSession) mMainServerCallback.onTimedOut();
-                    else mServerManagerCallback.onTimedOut(mSessionIndex);
+                    mClientCallback.onTimedOut();
                 }
 
                 while(iter.hasNext()) {
@@ -110,16 +99,24 @@ class ResponseReceiver extends Thread {
         messageHeader.mCryptType = coded_input.readInt32();
         messageHeader.mConnectionID = coded_input.readInt32();
 
-        if(messageHeader.mDataSize > 0) {
-            byte[] bodyBuf = stream.SafeRecv(messageHeader.mDataSize);
-
-            if(mIsMainServerSession) mMainServerCallback.onResponse(messageHeader, bodyBuf);
-            else mServerManagerCallback.onResponse(mSessionIndex, messageHeader, bodyBuf);
+        byte[] bodyBuf = stream.SafeRecv(messageHeader.mDataSize);
+        MessageType messageType = MessageType.fromInt(messageHeader.mMessageType);
+        switch (messageType) {
+            case PROTOBUF:
+            {
+                MessageLite message = Registry.GetMessage(messageHeader.mPacketType, bodyBuf);
+                Registry.ProtobufCallback callback = Registry.GetProtobufCallback(messageHeader.mPacketType);
+                if(callback != null)  callback.onCallback(message);
+            }
+                break;
+            case RAWBYTE:
+            {
+                Registry.RawbyteCallback callback = Registry.GetRawbyteCallback(messageHeader.mPacketType);
+                if(callback != null) callback.onCallback(messageHeader.mPacketType, bodyBuf, messageHeader.mDataSize);
+            }
+                break;
+            default:
+                throw new IllegalStateException("Unexpected value: " + messageHeader.mMessageType);
         }
-        else {
-            if(mIsMainServerSession) mMainServerCallback.onResponse(messageHeader, new byte[0]);
-            else mServerManagerCallback.onResponse(mSessionIndex, messageHeader, new byte[0]);
-        }
-
     }
 }

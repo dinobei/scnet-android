@@ -44,10 +44,6 @@ public class SCNetActivity extends Activity implements SCNetClientCallback, Rend
     }
 
     @Override
-    public void onResponse(MessageHeader messageHeader, byte[] bodyBuf) {
-    }
-
-    @Override
     public void onConnectedToRendezvousServer(String myPublicIP, String myPublicPort) {
     }
 
