@@ -2,7 +2,7 @@
 안드로이드(Java)용 네트워크 송수신 라이브러리
 
 ## 개요
-C++, Swift, Java(Android), C# 에서 패킷별 공용 헤더 사용으로 네트워크 송수신 과정 통합
+C++, Swift, Java(Android), Golang, C# 에서 패킷별 공용 헤더 사용으로 네트워크 송수신 과정 통합
 액티비티 상태에 따라 서버와의 커넥션을 자동으로 유지
 
 ## 기능
@@ -16,13 +16,15 @@ C++, Swift, Java(Android), C# 에서 패킷별 공용 헤더 사용으로 네트
 	- 사설IP를 사용하는 디바이스(스마트폰, 카메라 등)와의 통신을 위해 모든 NAT 타입을 지원하는 연결 프로토콜 구현체 (RendezvousClient)
 
 ## 라이브러리 연동 방법
-(1) ~/app/src/main/proto/ 에 사용할 프로토버퍼 메시지가 정의된 `.proto` 파일 추가
-- 프로젝트 루트에서 app/src/main/proto 폴더로 SCNet-pb 프로젝트를 복제(clone)
+(1) protobuf message 서브모듈 추가
+- ~/app/src/main/proto/ 에 사용할 프로토버퍼 메시지가 정의된 `.proto` 파일 추가하거나
+- 프로젝트 루트에서 app/src/main/proto 폴더로 SCNet-pb 프로젝트를 submodule로 추가
+    - submodule로 추가를 원치 않을 경우 `.proto` 파일을 직접 추가
 - SCNet-pb 프로젝트 주소: http://works.ijoon.net/Developer/SCNet-pb/
 
 ```
 $ cd ~/app/src/main
-$ git clone http://works.ijoon.net/Developer/SCNet-pb/ proto
+$ git submodule add http://works.ijoon.net/developer/scnet-pb app/src/main/proto
 ```
 
 (2) Project 레벨의 build.gradle의 depenencies에 다음과 같이 추가
@@ -30,7 +32,7 @@ $ git clone http://works.ijoon.net/Developer/SCNet-pb/ proto
 ...
 dependencies {
     ...
-    classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.6'
+    classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.8'
     ...
 }
 ```
@@ -40,7 +42,7 @@ dependencies {
 
 ```
 $ cd MyApp // 내 앱 최상위 경로로 이동
-$ git submodule add http://works.ijoon.net/Developer/SCNet-Android scnet-android
+$ git submodule add http://works.ijoon.net/developer/scnet-android scnet-android
 ```
 
 settings.gradle 파일을 다음과 같이 수정한 뒤 sync now 버튼 클릭
@@ -77,6 +79,11 @@ android {
             }
         }
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 }
 
 dependencies {
@@ -94,13 +101,68 @@ dependencies {
 public class CustomApplication extends GlobalApplication {
     @Override
     public void onCreate() {
-        Registry.registMessage("packet_1", 0);
-        Registry.registMessage("packet_2", 1);
-        Registry.registMessage("packet_3", 2);
-        Registry.registMessage("packet_4", 3);
-
-        setMainServerInfo("<Your Server IP Address>", <Your Server Port>, <Socket Timeout>); // 반드시 super.onCreate(); 이전에 호출해야 함
         super.onCreate();
+
+        Registry.registMessage(Packet.Packet1.getDefaultInstance(),
+                PacketType2.PacketType.packetType1_VALUE,
+                (MessageLite message) -> {
+                    Packet.Packet1 pkt1 = (Packet.Packet1)message;
+                    Log.d("log", "number: " + pkt1.getNumber());
+                });
+        Registry.registMessage(Packet.Packet2.getDefaultInstance(),
+                PacketType2.PacketType.packetType2_VALUE,
+                (MessageLite message) -> {
+                    Packet.Packet2 pkt2 = (Packet.Packet2)message;
+                    Log.d("log", "str: " + pkt2.getStr());
+                });
+        Registry.registMessage(Packet.Packet3.getDefaultInstance(),
+                PacketType2.PacketType.packetType3_VALUE,
+                (MessageLite message) -> {
+                    Packet.Packet3 pkt3 = (Packet.Packet3)message;
+                    Log.d("log", "bool: " + pkt3.getBoolValue());
+                });
+        Registry.registMessage(Packet.Packet4.getDefaultInstance(),
+                PacketType2.PacketType.packetType4_VALUE,
+                (MessageLite message) -> {
+                    Packet.Packet4 pkt4 = (Packet.Packet4)message;
+                    Log.d("log", "double: " + pkt4.getDoubleValue() + ", float: " + pkt4.getFloatValue());
+                });
+        Registry.registMessage(0,
+                (int packetType, byte[] message, int length) -> {
+                    Log.d("log", "rawbyte_1 received: " + new String(message));
+                });
+        Registry.registMessage(1,
+                (int packetType, byte[] message, int length) -> {
+                    Log.d("log", "rawbyte_2 received: " + new String(message));
+                });
+
+        ServerSession session = new ServerSession("192.168.0.100", 9190, 1000, new SCNetClientCallback() {
+            @Override
+            public void onAttaching() {
+                Log.d("log", "onAttaching");
+            }
+
+            @Override
+            public void onAttached() {
+                Log.d("log", "onAttached");
+            }
+
+            @Override
+            public void onAttachFailed() {
+                Log.d("log", "onAttachFailed");
+            }
+
+            @Override
+            public void onDetach() {
+                Log.d("log", "onDetach");
+            }
+
+            @Override
+            public void onTimedOut() {
+                Log.d("log", "onTimedOut");
+            }
+        });
+        session.start();
     }
 }
 
@@ -141,137 +203,14 @@ class MainActivity extends SCNetAppCompatActivity {
     public void onAttaching() {
         Log.d("logdinobei", "onAttaching");
     }
-
-    @Override
-    public void onResponse(int packetType, int cryptType, byte[] bodyBuf) {
-        Log.d("logdinobei", "onResponse, packetType: " + packetType);
-        switch (packetType) {
-            case 0:
-                try {
-                    ProtoMessage.packet_1 packet1 = ProtoMessage.packet_1.parseFrom(bodyBuf);
-                    Log.d("logdinobei", "packet1.getNumber(): " + packet1.getNumber());
-                } catch (InvalidProtocolBufferException e) {
-                    e.printStackTrace();
-                }
-                break;
-            case 1:
-                try {
-                    ProtoMessage.packet_2 packet2 = ProtoMessage.packet_2.parseFrom(bodyBuf);
-                    Log.d("logdinobei", "packet2.getNumber(): " + packet2.getNumber());
-                } catch (InvalidProtocolBufferException e) {
-                    e.printStackTrace();
-                }
-                break;
-            case 2:
-                try {
-                    ProtoMessage.packet_3 packet3 = ProtoMessage.packet_3.parseFrom(bodyBuf);
-                    Log.d("logdinobei", "packet3.getNumber(): " + packet3.getNumber());
-                } catch (InvalidProtocolBufferException e) {
-                    e.printStackTrace();
-                }
-                break;
-            case 3:
-                try {
-                    ProtoMessage.packet_4 packet4 = ProtoMessage.packet_4.parseFrom(bodyBuf);
-                    Log.d("logdinobei", "packet4.getNumber(): " + packet4.getNumber());
-                } catch (InvalidProtocolBufferException e) {
-                    e.printStackTrace();
-                }
-                break;
-        }
-    }
 }
 ```
 
 - 메시지 전송 예제
 
 ```java
-ProtoMessage.packet_1 packet1 = ProtoMessage.packet_1
-                                    .newBuilder()         
-                                    .setNumber(<Number You Want To Send>)
-                                    .build();
-mMyApplication.request(packet1);
-```
-
-## ServerManager를 이용한 외부서버(카메라 등) 연동
-- 원하는 액티비티에서 ServerManagerCallback 인터페이스 구현
-
-```java
-class MainActivity extends SCNetAppCompatActivity implement ServerManagerCallback {
-    @Override
-    public void onAttaching(int sessionIndex) {
-        Log.d("logdinobei", "onAttaching, sessionIndex: " + sessionIndex);
-    }
-
-    @Override
-    public void onAttached(int sessionIndex) {
-        Log.d("logdinobei", "onAttached, sessionIndex: " + sessionIndex);
-    }
-
-    @Override
-    public void onAttachFailed(int sessionIndex) {
-        Log.d("logdinobei", "onAttachFailed, sessionIndex: " + sessionIndex);
-    }
-
-    @Override
-    public void onDetach(int sessionIndex) {
-        Log.d("logdinobei", "onDetach, sessionIndex: " + sessionIndex);
-    }
-
-    @Override
-    public void onResponse(int sessionIndex, int packetType, int cryptType, byte[] bodyBuf) {
-        Log.d("logdinobei", "onResponse, sessionIndex: " + sessionIndex);
-
-        switch (packetType) {
-            case 0:
-                try {
-                    ProtoMessage.packet_1 packet1 = ProtoMessage.packet_1.parseFrom(bodyBuf);
-                    Log.d("logdinobei", "packet1.getNumber(): " + packet1.getNumber());
-                } catch (InvalidProtocolBufferException e) {
-                    e.printStackTrace();
-                }
-                break;
-            case 1:
-                try {
-                    ProtoMessage.packet_2 packet2 = ProtoMessage.packet_2.parseFrom(bodyBuf);
-                    Log.d("logdinobei", "packet2.getNumber(): " + packet2.getNumber());
-                } catch (InvalidProtocolBufferException e) {
-                    e.printStackTrace();
-                }
-                break;
-            case 2:
-                try {
-                    ProtoMessage.packet_3 packet3 = ProtoMessage.packet_3.parseFrom(bodyBuf);
-                    Log.d("logdinobei", "packet3.getNumber(): " + packet3.getNumber());
-                } catch (InvalidProtocolBufferException e) {
-                    e.printStackTrace();
-                }
-                break;
-            case 3:
-                try {
-                    ProtoMessage.packet_4 packet4 = ProtoMessage.packet_4.parseFrom(bodyBuf);
-                    Log.d("logdinobei", "packet4.getNumber(): " + packet4.getNumber());
-                } catch (InvalidProtocolBufferException e) {
-                    e.printStackTrace();
-                }
-                break;
-        }
-    }
-}
-```
-
-- 외부 서버에 연결
-
-```java
-int sessionIndex = ServerManager.getInstance().attach(<External Server IP>, <External Server Port>, <Socket Timeout>, <ServerManagerCallback>);
-```
-
-- 외부 서버로 패킷 전송
-
-```java
-ProtoMessage.packet_1 p = ProtoMessage.packet_1
-        .newBuilder()
-        .setNumber(<Number You Want To Send>)
-        .build();
-ServerManager.getInstance().request(sessionIndex, p);
+Packet.Packet1 packet1 = Packet.Packet1.newBuilder()
+                            .setNumber(<Number You Want To Send>)
+                            .build();
+serverSession.request(packet1);
 ```
