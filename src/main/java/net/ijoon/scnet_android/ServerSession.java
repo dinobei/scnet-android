@@ -102,22 +102,27 @@ public class ServerSession extends Thread {
 
                     mResponseReceiver.join();
                     mRequestSender.join();
-
-                    super.interrupt();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
-                    super.interrupt();
                 }
+
+                try {
+                    stream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                super.interrupt();
             }
 
             try {
                 Thread.sleep(1000);
-
-                stream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            } catch (InterruptedException ignored) {
+                try {
+                    stream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                super.interrupt();
             }
         }
 
