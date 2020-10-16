@@ -3,7 +3,7 @@ package net.ijoon.scnet_android;
 import android.app.Activity;
 import android.os.Bundle;
 
-public class SCNetActivity extends Activity implements SCNetClientCallback, RendezvousClientCallback {
+public class SCNetActivity extends Activity implements SCNetClientCallback {
     GlobalApplication mGlobalApplication;
 
     @Override
@@ -11,14 +11,12 @@ public class SCNetActivity extends Activity implements SCNetClientCallback, Rend
         super.onCreate(savedInstanceState);
         mGlobalApplication = (GlobalApplication)getApplicationContext();
         mGlobalApplication.mCallback = this;
-        mGlobalApplication.mRendezvousClientCallback = this;
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         mGlobalApplication.mCallback = this;
-        mGlobalApplication.mRendezvousClientCallback = this;
     }
 
     
@@ -41,45 +39,5 @@ public class SCNetActivity extends Activity implements SCNetClientCallback, Rend
     @Override
     public void onTimedOut() {
 
-    }
-
-    @Override
-    public void onConnectedToRendezvousServer(String myPublicIP, String myPublicPort) {
-    }
-
-    @Override
-    public void onConnecting(int connectionID) {
-    }
-
-    @Override
-    public void onConnected(RendezvousSession rendezvousSession, Connection connection) {
-    }
-
-    @Override
-    public void onConnectionIDCreated(RendezvousSession rendezvousSession, String ip, int port) {
-    }
-
-    @Override
-    public void onTargetInvalid(String ip, int port) {
-    }
-
-    @Override
-    public void onConnectFailed(int connectionID) {
-    }
-
-    @Override
-    public void onConnectionUpdate(RendezvousSession rendezvousSession, Connection connection) {
-    }
-
-    @Override
-    public void onConnectionRemoved(RendezvousSession rendezvousSession, Connection connection) {
-    }
-
-    @Override
-    public void onDisconnected(int connectionID) {
-    }
-
-    @Override
-    public void onMessage(MessageHeader messageHeader, byte[] buffer) {
     }
 }

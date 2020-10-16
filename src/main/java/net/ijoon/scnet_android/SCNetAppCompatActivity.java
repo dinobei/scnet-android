@@ -7,7 +7,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.ArrayList;
 
-public class SCNetAppCompatActivity extends AppCompatActivity implements SCNetClientCallback,RendezvousClientCallback {
+public class SCNetAppCompatActivity extends AppCompatActivity implements SCNetClientCallback {
     GlobalApplication mGlobalApplication;
     public static ArrayList<Activity> activityList = new ArrayList<Activity>();
 
@@ -17,7 +17,6 @@ public class SCNetAppCompatActivity extends AppCompatActivity implements SCNetCl
         activityList.add(this);
         mGlobalApplication = (GlobalApplication)getApplicationContext();
         mGlobalApplication.mCallback = this;
-        mGlobalApplication.mRendezvousClientCallback = this;
     }
 
     @Override
@@ -35,7 +34,6 @@ public class SCNetAppCompatActivity extends AppCompatActivity implements SCNetCl
     protected void onResume() {
         super.onResume();
         mGlobalApplication.mCallback = this;
-        mGlobalApplication.mRendezvousClientCallback = this;
     }
 
 
@@ -57,45 +55,5 @@ public class SCNetAppCompatActivity extends AppCompatActivity implements SCNetCl
 
     @Override
     public void onTimedOut() {
-    }
-
-    @Override
-    public void onConnectedToRendezvousServer(String myPublicIP, String myPublicPort) {
-    }
-
-    @Override
-    public void onConnecting(int connectionID) {
-    }
-
-    @Override
-    public void onConnected(RendezvousSession rendezvousSession, Connection connection) {
-    }
-
-    @Override
-    public void onConnectionIDCreated(RendezvousSession rendezvousSession, String ip, int port) {
-    }
-
-    @Override
-    public void onTargetInvalid(String ip, int port) {
-    }
-
-    @Override
-    public void onConnectFailed(int connectionID) {
-    }
-
-    @Override
-    public void onConnectionUpdate(RendezvousSession rendezvousSession, Connection connection) {
-    }
-
-    @Override
-    public void onConnectionRemoved(RendezvousSession rendezvousSession, Connection connection) {
-    }
-
-    @Override
-    public void onDisconnected(int connectionID) {
-    }
-
-    @Override
-    public void onMessage(MessageHeader messageHeader, byte[] buffer) {
     }
 }

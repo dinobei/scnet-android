@@ -1,9 +1,11 @@
 package net.ijoon.scnet_android;
-import android.util.Log;
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.MessageLite;
 
-import net.ijoon.scnet_android.MessageHeader.MessageType;
+import android.util.Log;
+import android.util.SparseArray;
+
+import com.google.protobuf.MessageLite;
+import com.google.protobuf.Parser;
+import com.scnet.SCNetPacket;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
@@ -17,7 +19,8 @@ class ResponseReceiver extends Thread {
     private SCNetClientCallback mClientCallback;
 
     private Stream mStream;
-    private RequestSender mRequestSender;
+
+    SparseArray<DedicatedCallback> dedicatedCallbackMap;
 
     ResponseReceiver(SCNetClientCallback callback) {
         mClientCallback = callback;
@@ -28,9 +31,9 @@ class ResponseReceiver extends Thread {
         throw new RuntimeException("Use requestSender.start(Stream, responseSender)");
     }
 
-    void start(Stream stream, RequestSender requestSender) {
-        mStream = stream;
-        mRequestSender = requestSender;
+    void start(Stream stream, SparseArray<DedicatedCallback> dedicatedCallbackMap) {
+        this.mStream = stream;
+        this.dedicatedCallbackMap = dedicatedCallbackMap;
         super.start();
     }
 
@@ -53,7 +56,7 @@ class ResponseReceiver extends Thread {
                     SelectionKey key = iter.next();
                     iter.remove();
                     if (key.isValid() && key.isReadable()) {
-                        recvResponse(mStream);
+                        recv();
                     }
                 }
             }
@@ -66,57 +69,32 @@ class ResponseReceiver extends Thread {
         Log.d("scnet_android", "Finished ResponseReceiver Thread");
     }
 
-    private void recvResponse(Stream stream) throws IOException {
-        byte[] magicPacket = stream.SafeRecv(MessageHeader.MAGIC_PACKET.length);
-        if(!MessageHeader.isValidMagicPacket(magicPacket)) {
+    public void recv() throws IOException {
+        int headLength = MessageHeader.MAGIC_PACKET.length + 4 + 2;
+
+        byte[] headPacket = mStream.SafeRecv(headLength);
+        if(!MessageHeader.isValidMagicPacket(headPacket)) {
             throw new IOException("Invalid magic packet");
         }
 
-        byte[] headerBuf = new byte[MessageHeader.MAX_PACKET_HEADER_SIZE];
-        int idx = 0;
-        int receivedHeaderComponent = 0;
+        int packetSize = headPacket[2] << 24 | headPacket[3] << 16 | headPacket[4] << 8 | headPacket[5];
+        int headerSize = headPacket[6] << 8 | headPacket[7];
 
-        while(true) {
-            byte[] data = stream.SafeRecv(1);
+        byte[] packetBuf = mStream.SafeRecv(packetSize);
 
-            headerBuf[idx++] = data[0];
 
-            if((data[0] & 0xFF) > (byte)127) {
-                continue;
-            }
-
-            if(++receivedHeaderComponent == MessageHeader.HEADER_ELEMENTS) {
-                break;
+        Parser parser = SCNetPacket.Header.parser();
+        SCNetPacket.Header header = (SCNetPacket.Header) parser.parseFrom(packetBuf, 0, headerSize);
+        MessageLite message = Registry.GetMessage(header.getPacketType(), packetBuf, headerSize, packetSize-headerSize);
+        if(header.getResCb() > 0) {
+            DedicatedCallback callback = dedicatedCallbackMap.get(header.getResCb());
+            if (callback != null) {
+                callback.onCallback(header, message);
+                return;
             }
         }
 
-        CodedInputStream coded_input = CodedInputStream.newInstance(headerBuf);
-
-        MessageHeader messageHeader = new MessageHeader();
-        messageHeader.mDataSize = coded_input.readInt32();
-        messageHeader.mPacketType = coded_input.readInt32();
-        messageHeader.mMessageType = coded_input.readInt32();
-        messageHeader.mCryptType = coded_input.readInt32();
-        messageHeader.mConnectionID = coded_input.readInt32();
-
-        byte[] bodyBuf = stream.SafeRecv(messageHeader.mDataSize);
-        MessageType messageType = MessageType.fromInt(messageHeader.mMessageType);
-        switch (messageType) {
-            case PROTOBUF:
-            {
-                MessageLite message = Registry.GetMessage(messageHeader.mPacketType, bodyBuf);
-                Registry.ProtobufCallback callback = Registry.GetProtobufCallback(messageHeader.mPacketType);
-                if(callback != null)  callback.onCallback(message);
-            }
-                break;
-            case RAWBYTE:
-            {
-                Registry.RawbyteCallback callback = Registry.GetRawbyteCallback(messageHeader.mPacketType);
-                if(callback != null) callback.onCallback(messageHeader.mPacketType, bodyBuf, messageHeader.mDataSize);
-            }
-                break;
-            default:
-                throw new IllegalStateException("Unexpected value: " + messageHeader.mMessageType);
-        }
+        Registry.ProtobufCallback callback = Registry.GetProtobufCallback(header.getPacketType());
+        if(callback != null)  callback.onCallback(header, message);
     }
 }
