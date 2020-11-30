@@ -8,6 +8,7 @@ import com.google.protobuf.Parser;
 import com.scnet.SCNetPacket;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.util.Iterator;
 
@@ -77,7 +78,7 @@ class ResponseReceiver extends Thread {
             throw new IOException("Invalid magic packet");
         }
 
-        int packetSize = headPacket[2] << 24 | headPacket[3] << 16 | headPacket[4] << 8 | headPacket[5];
+        int packetSize = ByteBuffer.wrap(headPacket, 2, 4).getInt();
         int headerSize = headPacket[6] << 8 | headPacket[7];
 
         byte[] packetBuf = mStream.SafeRecv(packetSize);
